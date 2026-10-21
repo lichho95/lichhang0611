@@ -209,3 +209,10 @@ Bản vá từ V8: hoạt cảnh **Thiệp mời · ngày chung đôi** dùng m�
 ## V8.2 · Mobile focus & opening typography
 
 Xem `docs/V8_2_MOBILE_FOCUS_OPENING_FIX.md` để biết chi tiết sửa iOS Safari tự zoom khi nhấn input/textarea trong modal và chữ “You're Invited” bị cắt nét cuối trên mobile.
+
+### V8.3 — RSVP attention & tự cuộn nhẹ
+
+- Floating RSVP có nhịp lắc ngắn và hào quang mềm, tự dừng khi đã xác nhận.
+- Khi khách mở thiệp nhưng không thao tác trong 10 giây, website gợi xem nội dung tiếp theo bằng các bước cuộn nhẹ; dừng khi có tương tác, khi mở popup, album hoặc admin. Hỗ trợ Reduced Motion.
+- Có thể tắt hoặc thay đổi nhịp bằng `rsvpAttention`, `autoStoryScroll`, `autoScrollIdleMs`, `autoScrollIntervalMs`, `autoScrollStepViewport` trong `src/wedding.config.ts`.
+- Xem chi tiết `docs/V8_3_RSVP_ATTENTION_AUTO_SCROLL.md`.

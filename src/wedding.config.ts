@@ -22,7 +22,7 @@ export const wedding = {
   quote: 'There is only one happiness in this life, to love and be loved.',
   thanks: 'Cảm ơn vì đã là một phần trong câu chuyện của chúng mình.',
   // MP3 128–192 kbps, 1–3 phút, dung lượng lý tưởng < 4 MB. Để '' sẽ ẩn nút nhạc.
-  musicUrl: '',
+  musicUrl: '/music/le-duong.mp3',
   // Cloudflare Turnstile public site key (KHÔNG phải secret); để trống khi chưa bật.
   turnstileSiteKey: '',
   // Đường dẫn video YouTube EMBED dạng https://www.youtube-nocookie.com/embed/VIDEO_ID — để '' nếu không dùng.
@@ -109,6 +109,15 @@ export const wedding = {
     heartRain: true,
     // LOVE MESSENGERS: chim bồ câu Fine Art mang và gắn card ký ức khi scroll; đổi thành false để tắt.
     doveMessengers: true,
+    // Floating RSVP: lắc rất nhẹ theo nhịp + hào quang champagne, dừng sau khi xác nhận.
+    rsvpAttention: true,
+    // Tự cuộn nhẹ chỉ SAU khi mở thiệp và nếu khách chưa từng tự tương tác.
+    // Không tự mở phong bì, không chạy khi mở popup / Admin / Reduced Motion.
+    autoStoryScroll: true,
+    autoScrollIdleMs: 10000,       // Chờ 10 giây không thao tác trước lần cuộn đầu tiên.
+    autoScrollIntervalMs: 9000,   // Các lần cuộn tiếp theo cách nhau 9 giây.
+    autoScrollStepViewport: 0.63, // Mỗi lần di chuyển 63% chiều cao viewport.
+
   },
   sections: {
     opening: true,

@@ -11,6 +11,7 @@ import { MemoryCard } from './components/MemoryCard';
 import { FragmentsHeading } from './components/FragmentsHeading';
 import { AdminDashboard } from './components/AdminDashboard';
 import { TwoHalvesHeart } from './components/TwoHalvesHeart';
+import { useGentleAutoScroll } from './components/useGentleAutoScroll';
 import { buildCalendarUrl, clampIndex, countdownParts, getGuestName, withLeadingZero } from './lib/utils';
 import { loadWishes, sendRSVP, sendWish, type Wish } from './lib/api';
 
@@ -487,6 +488,14 @@ export default function App() {
       }
     }
   };
+  // Auto-preview nhẹ khi khách mở thiệp và không thao tác; click/scroll/touch để dừng hẳn.
+  // Không chạy trong Admin, các popup, lightbox hoặc khi người dùng bật Reduced Motion.
+  useGentleAutoScroll({
+    enabled: opened && !showAdmin && wedding.effects.autoStoryScroll,
+    idleDelayMs: wedding.effects.autoScrollIdleMs,
+    intervalMs: wedding.effects.autoScrollIntervalMs,
+    stepViewport: wedding.effects.autoScrollStepViewport,
+  });
   const audioRef=useRef<HTMLAudioElement>(null);
   useEffect(()=>{if(!opened){window.scrollTo({top:0,behavior:'auto'});document.body.style.overflow='hidden';return()=>{document.body.style.overflow='';};}},[opened]);
   const enter=()=>{setHeroRevealed(true);setOpened(true);};
@@ -526,11 +535,15 @@ export default function App() {
     {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>
       {opened && wedding.sections.rsvp && rsvpVisible && !rsvpOpen && !showAdmin &&
-        <motion.button type="button" className={`floating-rsvp ${rsvpConfirmed?'floating-rsvp-confirmed':''}`}
+        <motion.div className="floating-rsvp-dock"
           initial={{opacity:0,x:22,scale:.9}} animate={{opacity:1,x:0,scale:1}} exit={{opacity:0,x:20,scale:.92}}
-          transition={{duration:.55,ease}} onClick={()=>setRsvpOpen(true)} aria-label="Mở xác nhận tham dự">
-          <Mail size={17}/><span>{rsvpConfirmed?'Đã xác nhận':'Xác nhận tham dự'}</span><ArrowUpRight size={14}/>
-        </motion.button>}
+          transition={{duration:.55,ease}}>
+          <button type="button"
+            className={`floating-rsvp ${rsvpConfirmed?'floating-rsvp-confirmed':wedding.effects.rsvpAttention?'floating-rsvp-attention':''}`}
+            onClick={()=>setRsvpOpen(true)} aria-label="Mở xác nhận tham dự">
+            <Mail size={17}/><span>{rsvpConfirmed?'Đã xác nhận':'Xác nhận tham dự'}</span><ArrowUpRight size={14}/>
+          </button>
+        </motion.div>}
     </AnimatePresence>
     <AnimatePresence>
       {rsvpOpen && !showAdmin && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự" variant="rsvp"><RSVPForm guestName={guestName} onConfirmed={()=>setRsvpConfirmed(true)}/></Modal>}

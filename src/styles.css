@@ -3620,3 +3620,89 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
     white-space: nowrap;
   }
 }
+
+/* =====================================================================
+   V8.3 — RSVP subtle attention / elegant floating glow
+   Entry Motion runs on the DOCK, while the button's gentle nudge is CSS.
+   Never animate the same `transform` with both CSS and Motion.
+   ===================================================================== */
+.floating-rsvp-dock {
+  position: fixed;
+  right: clamp(16px, 3vw, 45px);
+  bottom: max(22px, calc(env(safe-area-inset-bottom) + 13px));
+  z-index: 115;
+  max-width: calc(100vw - 32px);
+  isolation: isolate;
+}
+.floating-rsvp-dock > .floating-rsvp {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  max-width: 100%;
+  isolation: isolate;
+  transform-origin: 50% 60%;
+}
+.floating-rsvp-attention { animation: rsvp-gentle-nudge 2.5s ease-in-out infinite; }
+.floating-rsvp-attention::before,
+.floating-rsvp-attention::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  border-radius: inherit;
+  z-index: -1;
+}
+.floating-rsvp-attention::before {
+  inset: -5px;
+  border: 1px solid rgba(202, 151, 136, .65);
+  box-shadow: 0 0 15px rgba(177, 104, 113, .2), 0 0 23px rgba(210, 160, 119, .14);
+  opacity: 0;
+  animation: rsvp-soft-halo 8.5s ease-in-out infinite;
+}
+.floating-rsvp-attention::after {
+  inset: -11px;
+  background: radial-gradient(ellipse, rgba(236, 195, 153, .26) 18%, transparent 72%);
+  filter: blur(7px);
+  opacity: 0;
+  animation: rsvp-soft-halo 8.5s ease-in-out infinite;
+}
+@keyframes rsvp-gentle-nudge {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  20% {
+    transform: translateY(-2px) rotate(-2deg);
+  }
+
+  40% {
+    transform: translateY(0) rotate(2deg);
+  }
+
+  60% {
+    transform: translateY(-2px) rotate(-1.5deg);
+  }
+
+  80% {
+    transform: translateY(0) rotate(1.5deg);
+  }
+}
+@keyframes rsvp-soft-halo {
+  0%, 100% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+@media (max-width: 680px) {
+  .floating-rsvp-dock {
+    right: 16px;
+    bottom: max(17px, calc(env(safe-area-inset-bottom) + 10px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-rsvp-attention,
+  .floating-rsvp-attention::before,
+  .floating-rsvp-attention::after { animation: none !important; }
+}
