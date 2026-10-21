@@ -1,0 +1,20 @@
+-- Triển khai bằng: npx wrangler d1 execute wedding-db --remote --file=./schema.sql
+CREATE TABLE IF NOT EXISTS wishes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guest_name TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','hidden')),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_wishes_status_created_at ON wishes(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS rsvps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guest_name TEXT NOT NULL,
+  attending INTEGER NOT NULL CHECK(attending IN (0,1)),
+  guest_count INTEGER NOT NULL CHECK(guest_count BETWEEN 0 AND 5),
+  event_id TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_rsvps_created_at ON rsvps(created_at DESC);

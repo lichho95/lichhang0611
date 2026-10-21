@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "the-living-ribbon",
+  "pages_build_output_dir": "./dist",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "wedding-db", "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID" }
+  ],
+  "vars": {
+    "MODERATE_WISHES": "true"
+  }
+}
