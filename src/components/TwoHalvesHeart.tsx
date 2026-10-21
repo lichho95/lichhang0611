@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from 'motion/react';
+import { useRef } from 'react';
+import { motion, useInView, useReducedMotion } from 'motion/react';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -10,9 +11,19 @@ const ease = [0.22, 1, 0.36, 1] as const;
  */
 export function TwoHalvesHeart() {
   const reduced = useReducedMotion();
+  // Mobile Safari can report unstable IntersectionObserver bounds for SVG <g>/<path>.
+  // Observe this real HTML wrapper once, and synchronize the ENTIRE illustration.
+  // The wrapper stays measurable at every breakpoint (unlike individual SVG shapes).
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const isSceneVisible = useInView(sceneRef, {
+    once: true,
+    amount: 0.15,
+    margin: '0px 0px -8% 0px',
+  });
+  const playScene = isSceneVisible || Boolean(reduced);
   const duration = reduced ? 0 : 1.45;
   return (
-    <div className="hearts-ceremony" aria-label="Hình minh hoạ cô dâu chú rể mang hai nửa trái tim ghép thành một">
+    <div ref={sceneRef} className="hearts-ceremony" aria-label="Hình minh hoạ cô dâu chú rể mang hai nửa trái tim ghép thành một">
       <svg className="hearts-ceremony-art" viewBox="0 0 760 290" role="img" aria-labelledby="two-hearts-title">
         <title id="two-hearts-title">Chú rể và cô dâu cùng mang hai nửa trái tim thành một</title>
         <defs>
@@ -20,7 +31,7 @@ export function TwoHalvesHeart() {
           <linearGradient id="wedding-heart" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#c78b8e"/><stop offset="1" stopColor="#793e4d"/></linearGradient>
           <linearGradient id="bridal-veil" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fffaf2" stopOpacity=".94"/><stop offset="1" stopColor="#e3bfbd" stopOpacity=".50"/></linearGradient>
         </defs>
-        <motion.g initial={reduced?false:{x:-125,opacity:0}} whileInView={{x:0,opacity:1}} viewport={{once:true,amount:.5}}
+        <motion.g initial={reduced?false:{x:-125,opacity:0}} animate={playScene ? {x:0,opacity:1} : {x:-125,opacity:0}}
           transition={{duration,ease}}>
           {/* groom head and tailored suit silhouette, hand extended toward the centre */}
           <g transform="translate(206 31)">
@@ -34,7 +45,7 @@ export function TwoHalvesHeart() {
             <path d="M27 84 L15 107 L29 129 L39 104 M63 86 L75 106 L62 129" fill="none" stroke="#d4ac9b" strokeWidth="2" opacity=".65"/>
           </g>
         </motion.g>
-        <motion.g initial={reduced?false:{x:125,opacity:0}} whileInView={{x:0,opacity:1}} viewport={{once:true,amount:.5}} transition={{duration,ease}}>
+        <motion.g initial={reduced?false:{x:125,opacity:0}} animate={playScene ? {x:0,opacity:1} : {x:125,opacity:0}} transition={{duration,ease}}>
           {/* bride profile, gathered gown and flowing veil */}
           <g transform="translate(470 28)">
             <path d="M45 35 Q41 13 57 8 Q77 5 82 27 Q84 48 70 60 L70 71 L51 72 L54 58 Q43 51 45 35Z" fill="#e7c8b9"/>
@@ -49,19 +60,19 @@ export function TwoHalvesHeart() {
           </g>
         </motion.g>
         {/* The matching vertical seam is exactly x=380 (all art shares this viewBox). */}
-        <motion.g initial={reduced?false:{x:-50,opacity:0,rotate:-11}} whileInView={{x:0,opacity:1,rotate:0}} viewport={{once:true,amount:.55}} style={{transformBox:"fill-box",transformOrigin:"center"}} transition={{duration:reduced?0:1.0,delay:reduced?0:1.05,ease}}>
+        <motion.g initial={reduced?false:{x:-50,opacity:0,rotate:-11}} animate={playScene ? {x:0,opacity:1,rotate:0} : {x:-50,opacity:0,rotate:-11}} style={{transformBox:"fill-box",transformOrigin:"center"}} transition={{duration:reduced?0:1.0,delay:reduced?0:1.05,ease}}>
           <path d="M380 124 C360 94 329 92 317 112 C292 150 332 183 380 221 Z" fill="url(#wedding-heart)"/>
         </motion.g>
-        <motion.g initial={reduced?false:{x:50,opacity:0,rotate:11}} whileInView={{x:0,opacity:1,rotate:0}} viewport={{once:true,amount:.55}} style={{transformBox:"fill-box",transformOrigin:"center"}} transition={{duration:reduced?0:1.0,delay:reduced?0:1.05,ease}}>
+        <motion.g initial={reduced?false:{x:50,opacity:0,rotate:11}} animate={playScene ? {x:0,opacity:1,rotate:0} : {x:50,opacity:0,rotate:11}} style={{transformBox:"fill-box",transformOrigin:"center"}} transition={{duration:reduced?0:1.0,delay:reduced?0:1.05,ease}}>
           <path d="M380 124 C400 94 431 92 443 112 C468 150 428 183 380 221 Z" fill="url(#wedding-heart)"/>
         </motion.g>
         <motion.circle cx="380" cy="148" r="78" fill="none" stroke="#b9888a" strokeWidth="1.2" strokeDasharray="2 10"
-          initial={reduced?false:{opacity:0,scale:.75}} whileInView={{opacity:.46,scale:1}} viewport={{once:true}} transition={{duration:reduced?0:.9,delay:reduced?0:1.95}} style={{transformBox:'fill-box', transformOrigin:'center'}}/>
+          initial={reduced?false:{opacity:0,scale:.75}} animate={playScene ? {opacity:.46,scale:1} : {opacity:0,scale:.75}} transition={{duration:reduced?0:.9,delay:reduced?0:1.95}} style={{transformBox:'fill-box', transformOrigin:'center'}}/>
         <motion.path d="M8 235 C113 198 190 275 285 244 S405 257 478 244 S645 200 753 239" fill="none" stroke="#b0797e" strokeWidth="2.6" strokeLinecap="round" opacity=".78"
-          initial={reduced?false:{pathLength:0}} whileInView={{pathLength:1}} viewport={{once:true,amount:.5}}
+          initial={reduced?false:{pathLength:0}} animate={{pathLength:playScene ? 1 : 0}}
           transition={{duration:reduced?0:1.35,delay:reduced?0:2.0,ease}} />
       </svg>
-      <motion.p className="hearts-ceremony-caption" initial={reduced?false:{opacity:0,y:10}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:reduced?0:2.3,duration:.7}}>TWO HALVES · ONE HEART</motion.p>
+      <motion.p className="hearts-ceremony-caption" initial={reduced?false:{opacity:0,y:10}} animate={playScene ? {opacity:1,y:0} : {opacity:0,y:10}} transition={{delay:reduced?0:2.3,duration:.7}}>TWO HALVES · ONE HEART</motion.p>
     </div>
   );
 }

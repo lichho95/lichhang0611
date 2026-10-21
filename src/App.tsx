@@ -198,7 +198,12 @@ function WeddingInvitation({ guestName }: { guestName: string }) {
     <div className="container invitation-layout">
       <div className="invitation-header">
         <span className="eyebrow">TWO SOULS · ONE STORY</span>
-        <h2 id="invitation-heading" className="section-title">Thiệp mời <em>ngày chung đôi</em></h2>
+        <motion.h2 id="invitation-heading" className="section-title"
+          initial={reduced ? false : { opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }}
+          transition={{ duration: reduced ? 0 : .9, ease }}>
+          Thiệp mời <em>ngày chung đôi</em>
+        </motion.h2>
         <p>Trân trọng kính mời bạn đến chung vui trong ngày hạnh phúc của hai gia đình.</p>
       </div>
       <TwoHalvesHeart/>
@@ -394,7 +399,7 @@ function GiftSection() {
     <AnimatePresence>{open && <Modal delay={reduced?0:.12} onClose={()=>{setOpen(false);setUnwrapping(false);}} label="Thông tin mừng cưới"><div className="gift-modal-content"><span className="eyebrow">A GIFT OF LOVE</span><h3>Một chút yêu thương</h3><p>Những lời chúc và sự hiện diện của bạn là niềm hạnh phúc của chúng mình. Nếu muốn gửi món quà nhỏ, bạn có thể sử dụng thông tin bên dưới.</p>{wedding.bankAccounts.length ? <div className="gift-bank-list">{wedding.bankAccounts.map(account=><div className="bank-card" key={account.accountNumber}><span className="eyebrow">{account.role} · {account.bank}</span><h4>{account.owner}</h4>{account.qrImage && <ImageFrame src={account.qrImage} alt={`Mã QR chuyển khoản của ${account.owner}`} className="bank-qr"/>}<p className="bank-account-number">{account.accountNumber}</p><button className="button button-outline" onClick={()=>copy(account.accountNumber)}>{copied===account.accountNumber?<Check size={15}/>:<Copy size={15}/>} {copied===account.accountNumber?'Đã sao chép':'Sao chép số tài khoản'}</button></div>)}</div> : <div className="gift-empty"><Mail size={28}/><p>Thông tin mừng cưới sẽ được cập nhật.<br/>Bạn có thể thay tài khoản & QR thật tại <code>src/wedding.config.ts</code>.</p></div>}{copied.startsWith('Không thể') && <p role="status">{copied}</p>}</div></Modal>}</AnimatePresence>
   </section>;
 }
-function Modal({ onClose, label, children, delay=0 }: { onClose: () => void; label: string; children: ReactNode; delay?:number }) {
+function Modal({ onClose, label, children, delay=0, variant }: { onClose: () => void; label: string; children: ReactNode; delay?:number; variant?: "rsvp" }) {
   const dialogRef=useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
   const closeRef=useRef(onClose);
@@ -417,7 +422,7 @@ function Modal({ onClose, label, children, delay=0 }: { onClose: () => void; lab
     return()=>{window.removeEventListener('keydown',key);document.body.style.overflow=oldOverflow;previous?.focus();};
   },[]);
   return createPortal(<motion.div className="modal-backdrop" role="presentation" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0,transition:{duration:reduced?.12:.22}}} transition={{duration:reduced?.12:.25}} onClick={onClose}>
-    <motion.div ref={dialogRef} role="dialog" aria-modal="true" aria-label={label} className="modal-card modal-card-delicate" onClick={e=>e.stopPropagation()}
+    <motion.div ref={dialogRef} role="dialog" aria-modal="true" aria-label={label} className={`modal-card modal-card-delicate${variant === "rsvp" ? " modal-card-rsvp" : ""}`} onClick={e=>e.stopPropagation()}
       initial={reduced?{opacity:0}:{opacity:0,y:26,scale:.965,rotateX:3}}
       animate={{opacity:1,y:0,scale:1,rotateX:0}}
       exit={reduced?{opacity:0}:{opacity:0,y:15,scale:.985,rotateX:2}}
@@ -528,7 +533,7 @@ export default function App() {
         </motion.button>}
     </AnimatePresence>
     <AnimatePresence>
-      {rsvpOpen && !showAdmin && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự"><RSVPForm guestName={guestName} onConfirmed={()=>setRsvpConfirmed(true)}/></Modal>}
+      {rsvpOpen && !showAdmin && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự" variant="rsvp"><RSVPForm guestName={guestName} onConfirmed={()=>setRsvpConfirmed(true)}/></Modal>}
     </AnimatePresence>
     <AnimatePresence>{lightbox!==null && <Lightbox index={lightbox} setIndex={setLightbox} onClose={()=>setLightbox(null)}/>}</AnimatePresence>
     <AnimatePresence>{videoOpen && Boolean(wedding.videoEmbedUrl) && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${String(wedding.videoEmbedUrl).includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>

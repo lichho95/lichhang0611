@@ -200,3 +200,12 @@ Xem `docs/ANIMATION_V4_CHANGELOG.md` để biết cơ chế, tùy chỉnh và ph
 
 ### Bản sửa V6.1
 Khôi phục vòng khoanh ngày cưới và bỏ bộ lọc làm ảnh demo bị tối/xỉn. Chi tiết: `docs/IMAGE_CLARITY_AND_CALENDAR_V6_1.md`.
+
+### Cập nhật V8.1 — lỗi animation mobile và modal RSVP
+
+Bản vá từ V8: hoạt cảnh **Thiệp mời · ngày chung đôi** dùng một HTML observer chung để kích hoạt SVG ổn định trên mobile; phần popup **Xác nhận tham dự** đã chừa chỗ cho nút đóng và bỏ viền góc cũ giao nút gửi. Toàn bộ Admin Dashboard, D1, các API và cấu hình ảnh giữ nguyên. Chi tiết: [`docs/V8_1_MOBILE_FIX_CHANGELOG.md`](docs/V8_1_MOBILE_FIX_CHANGELOG.md).
+
+
+## V8.2 · Mobile focus & opening typography
+
+Xem `docs/V8_2_MOBILE_FOCUS_OPENING_FIX.md` để biết chi tiết sửa iOS Safari tự zoom khi nhấn input/textarea trong modal và chữ “You're Invited” bị cắt nét cuối trên mobile.

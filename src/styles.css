@@ -3517,3 +3517,106 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media (prefers-reduced-motion:reduce) {
   .gallery-tile,.gallery-tile img,.modal-close {transition:none !important;}
 }
+
+
+/* =====================================================================
+   V8.1 — Mobile fixes
+   1) The wedding animation now uses one HTML IntersectionObserver target.
+      (See TwoHalvesHeart.tsx; no SVG layout changes necessary.)
+   2) RSVP has a dedicated dialog header safe-area and NO decorative form
+      corner borders: the old ::after overlapped the submit button on mobile.
+   ===================================================================== */
+.modal-card-rsvp .modal-close {
+  top: 18px;
+  right: 18px;
+  width: 40px;
+  height: 40px;
+}
+.modal-card-rsvp .rsvp-modal-caption {
+  box-sizing: border-box;
+  text-align: left;
+  margin: 0 0 15px;
+  width: calc(100% - 58px);
+  padding: 0;
+  font-size: clamp(13px, 3vw, 15px);
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+/* Strip only the outdated decorative frame in the modal, not standalone forms. */
+.modal-card-rsvp .rsvp-form::before,
+.modal-card-rsvp .rsvp-form::after {
+  content: none;
+  display: none;
+}
+.modal-card-rsvp .rsvp-submit {
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 680px) {
+  .modal-card-rsvp {
+    padding: 24px 17px 22px;
+    width: min(100%, 480px);
+  }
+  .modal-card-rsvp .modal-close {
+    top: 14px;
+    right: 14px;
+    width: 40px;
+    height: 40px;
+  }
+  .modal-card-rsvp .rsvp-modal-caption {
+    width: calc(100% - 56px);
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .modal-card-rsvp .rsvp-form {
+    padding: 14px 0 8px;
+  }
+}
+
+
+/* =====================================================================
+   V8.2 — Mobile input focus & opening-script clipping fixes
+   - iOS Safari automatically zooms controls whose computed font is <16px.
+     Keep all user-editable fields inside dialogs at >=16px; do NOT disable
+     accessibility zoom in <meta name="viewport">.
+   - Great Vibes has a long finishing swash on the last "d" in "Invited".
+     Keep enough room for this glyph and scale the opening title fluidly
+     instead of forcing 54px on every narrow screen.
+   ===================================================================== */
+@media (max-width: 850px) {
+  .modal-card input:not([type="checkbox"]):not([type="radio"]),
+  .modal-card textarea,
+  .modal-card select {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+
+/* Keep script flourishes inside the safe width on iPhone SE/mini. */
+@media (max-width: 680px) {
+  .opening-copy {
+    box-sizing: border-box;
+    width: min(100%, 440px);
+    padding-inline: 12px;
+    overflow: visible;
+  }
+  .opening-copy .invitation-script {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 8px 0 4px;
+    padding: .12em .12em .24em;
+    font-size: clamp(39px, 11vw, 54px);
+    line-height: 1.33;
+    letter-spacing: 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible;
+  }
+  .envelope-note-script {
+    font-size: clamp(29px, 8.8vw, 40px);
+    line-height: 1.3;
+    padding: .06em .08em .16em;
+    white-space: nowrap;
+  }
+}
