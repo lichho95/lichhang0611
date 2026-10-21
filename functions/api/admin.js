@@ -1,13 +1,13 @@
 import { json, clean, readPayload } from '../../server/common.js';
 
 function checkAuth(request, payload, env) {
-  const expectedPin = (env.ADMIN_PIN || '123456').trim();
-  const url = new URL(request.url);
+  // BẮT BUỘC đặt ADMIN_PIN qua Cloudflare Pages Secrets. Không có mật khẩu mặc định trong production.
+  const expectedPin = (env.ADMIN_PIN || '').trim();
+  if (!expectedPin || expectedPin.length < 6) return false;
   const authHeader = request.headers.get('authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim()
     || request.headers.get('x-admin-pin')
-    || (payload && typeof payload.pin === 'string' ? payload.pin.trim() : '')
-    || (url.searchParams.get('pin') || '').trim();
+    || (payload && typeof payload.pin === 'string' ? payload.pin.trim() : '');
   return token === expectedPin;
 }
 

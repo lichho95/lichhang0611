@@ -1,3 +1,7 @@
+> **Phiên bản V8 (21/10/2026):** Gallery desktop collage Polaroid / mobile stacked photos, căn ngày 14, tinh chỉnh khoảng cách, RSVP hai tab đơn giản và popup animation. Xem [V8 change log](docs/V8_GALLERY_RSVP_SPACING_CHANGELOG.md). Giữ nguyên Admin Dashboard từ bản V7 của người dùng.
+
+> **CẬP NHẬT V7:** Đây là bản xây dựng trực tiếp trên `the-living-ribbon-animation-v6-1-update.zip` do bạn cung cấp; giữ trang admin đã thêm. Xem `docs/V7_INVITATION_ADMIN_CHANGELOG.md` để biết cấu trúc thiệp cưới mới, animation Two Halves / One Heart, RSVP pill và modal viết lời chúc.
+
 > **Cập nhật Animation V3 (21/10/2026):** xem `docs/ANIMATION_V3_CHANGELOG.md` để biết những nâng cấp ribbon, opening, story, gallery, calendar, gift và cách kiểm tra mobile/desktop.
 
 # The Living Ribbon — Wedding Website
@@ -112,8 +116,8 @@ Website tích hợp sẵn **Trang Quản trị Mini bí mật** để cô dâu &
   - Truy cập URL: `http://localhost:5173/admin` (hoặc thêm query `?admin=1`).
   - Hoặc kéo xuống chân trang (Footer) và bấm vào nút **"Quản trị thiệp"** (kế bên "Xem lại hiệu ứng mở thiệp").
 - **Mã PIN**:
-  - Mặc định ở chế độ demo/local: `123456`.
-  - Trên Cloudflare Pages: Vào **Settings → Variables and Secrets** → thêm biến **`ADMIN_PIN`** với mật mã riêng của hai bạn (ví dụ: `889966`).
+  - Ở localhost (`npm run dev`), dùng bất kỳ PIN demo từ 4 ký tự. **Không có PIN mặc định trong production.**
+  - Trên Cloudflare Pages: Vào **Settings → Variables and Secrets** → thêm biến **`ADMIN_PIN`** với mật mã bí mật **tối thiểu 6 ký tự**, nên dùng ngẫu nhiên 12 ký tự trở lên.
 - **Tính năng nổi bật**:
   - 👥 **Thống kê đăng ký RSVP**: Đếm tổng số khách tham dự, số người vắng mặt, số suất cỗ theo từng sự kiện (Lễ cưới, Tiệc cưới...).
   - 📥 **Xuất Excel / CSV**: Tải danh sách khách mời (có hỗ trợ UTF-8 tiếng Việt không lỗi font) hoặc bấm **"Sao chép gửi Zalo"** để gửi nhanh cho gia đình/nhà hàng.

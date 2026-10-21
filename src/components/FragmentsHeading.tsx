@@ -36,7 +36,7 @@ export function FragmentsHeading() {
           transition={{ duration: reduced ? 0 : 1.2, delay: .7, ease }} />
       </motion.svg>
       <motion.p className="section-description" initial={{opacity:0,y:12}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{duration:.65,delay:.42}}>
-        Một vài khoảnh khắc mà chúng mình muốn giữ mãi.
+        Một album nhỏ lưu giữ những ánh nhìn, nụ cười và những ngày thật đẹp bên nhau.
       </motion.p>
       <span className="fragments-frame-mark fragments-frame-mark-left" aria-hidden="true">01 — 06</span>
       <span className="fragments-frame-mark fragments-frame-mark-right" aria-hidden="true">LOVE, ON FILM</span>

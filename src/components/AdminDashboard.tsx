@@ -185,7 +185,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
   // Xuất file CSV
   const handleExportCSV = () => {
     const eventMap = new Map<string, string>(
-      (wedding.events as readonly { id: string; label: string }[]).map(e => [e.id, e.label])
+      [...((wedding.events as readonly { id: string; label: string }[]).map(e => [e.id, e.label]) as [string, string][]), ['wedding', 'Toàn bộ lễ cưới']]
     );
     const headers = ['STT', 'Họ và tên khách', 'Trạng thái', 'Số khách tham dự', 'Sự kiện tham dự', 'Lời nhắn / Ghi chú', 'Thời gian gửi'];
     const rows = filteredRsvps.map((r, i) => {
@@ -222,7 +222,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
   // Sao chép danh sách tóm tắt gửi Zalo/Chat
   const handleCopySummary = async () => {
     const eventMap = new Map<string, string>(
-      (wedding.events as readonly { id: string; label: string }[]).map(e => [e.id, e.label])
+      [...((wedding.events as readonly { id: string; label: string }[]).map(e => [e.id, e.label]) as [string, string][]), ['wedding', 'Toàn bộ lễ cưới']]
     );
     const attendingList = rsvps.filter(r => r.attending === 1 || r.attending === true);
     const declinedList = rsvps.filter(r => r.attending === 0 || r.attending === false);
@@ -293,13 +293,13 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                 type="password"
                 inputMode="numeric"
                 autoFocus
-                placeholder="Ví dụ: 123456"
+                placeholder="Mã PIN quản trị"
                 value={pin}
                 onChange={e => setPin(e.target.value)}
                 className="w-full px-4 py-3 text-center text-lg tracking-widest bg-white border border-[#ddc8ba] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#702b3a]/25 focus:border-[#702b3a]"
               />
               <p className="text-[11px] text-[#967e73] mt-1.5 text-center">
-                Mặc định bản thử nghiệm: <code className="bg-[#f6eee4] px-1.5 py-0.5 rounded text-[#702b3a] font-mono">123456</code> (đổi qua biến <code className="bg-[#f6eee4] px-1 py-0.5 rounded font-mono">ADMIN_PIN</code>)
+                Bản chạy thử local: nhập PIN bất kỳ từ 4 ký tự. Khi deploy, bắt buộc thiết lập secret <code className="bg-[#f6eee4] px-1 py-0.5 rounded font-mono">ADMIN_PIN</code> tối thiểu 6 ký tự.
               </p>
             </div>
 
@@ -664,7 +664,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
             <div className="space-y-4">
               {/* Thống kê chi tiết theo sự kiện */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {wedding.events.map(evt => {
+                {[{id:'wedding',label:'Toàn bộ lễ cưới'},...wedding.events].map(evt => {
                   const evtStats = stats?.events?.find(e => e.event_id === evt.id);
                   const count = evtStats?.count ?? rsvps.filter(r => (r.attending === 1 || r.attending === true) && r.event_id === evt.id).length;
                   const guests = evtStats?.guests ?? rsvps
@@ -717,7 +717,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                     className="px-3 py-2 text-xs bg-[#fbf9f5] border border-[#ddc8ba] rounded-xl text-[#543b36] focus:outline-none"
                   >
                     <option value="all">Mọi sự kiện</option>
-                    {wedding.events.map(evt => (
+                    {[{id:'wedding',label:'Toàn bộ lễ cưới'},...wedding.events].map(evt => (
                       <option key={evt.id} value={evt.id}>{evt.label}</option>
                     ))}
                   </select>
@@ -764,7 +764,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                         {filteredRsvps.map(r => {
                           const isAttending = r.attending === 1 || r.attending === true;
                           const eventObj = wedding.events.find(e => e.id === r.event_id);
-                          const eventLabel = eventObj?.label || r.event_id;
+                          const eventLabel = r.event_id === 'wedding' ? 'Toàn bộ lễ cưới' : eventObj?.label || r.event_id;
 
                           return (
                             <tr key={r.id} className="hover:bg-[#faf7f0] transition-colors">

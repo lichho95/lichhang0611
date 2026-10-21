@@ -203,8 +203,8 @@ export async function adminLogin(pin: string): Promise<{ ok: boolean; error?: st
     }
     return { ok: true };
   } catch {
-    // Nếu chưa cấu hình D1/Functions, cho phép dùng thử ở demo mode
-    return { ok: true };
+    // Không bao giờ báo đăng nhập thành công giả trên bản đã deploy.
+    return { ok: false, error: 'Không thể kết nối API quản trị. Hãy kiểm tra Pages Functions.' };
   }
 }
 
@@ -224,16 +224,15 @@ export async function fetchAdminData(pin: string): Promise<AdminDataResponse> {
 
     if (!res.ok) {
       const err = await parseError(res);
-      // Fallback nếu chưa kết nối DB
       const local = getLocalAdminData();
-      return { ok: true, stats: local.stats, wishes: local.wishes, rsvps: local.rsvps, demo: true, error: err };
+      return { ok: false, stats: local.stats, wishes: [], rsvps: [], error: err };
     }
 
     const data = await res.json() as AdminDataResponse;
     return { ...data, demo: false };
-  } catch (err) {
+  } catch {
     const local = getLocalAdminData();
-    return { ok: true, stats: local.stats, wishes: local.wishes, rsvps: local.rsvps, demo: true, error: String(err) };
+    return { ok: false, stats: local.stats, wishes: [], rsvps: [], error: 'Mất kết nối tới trang quản trị.' };
   }
 }
 
@@ -254,11 +253,7 @@ export async function updateWishStatus(pin: string, id: number, status: 'approve
     if (!res.ok) return { ok: false, error: await parseError(res) };
     return { ok: true };
   } catch {
-    // Fallback local
-    const wishes = safeRead<AdminWish[]>(WISH_KEY, []);
-    const updated = wishes.map(w => w.id === id ? { ...w, status } : w);
-    safeWrite(WISH_KEY, updated);
-    return { ok: true, demo: true };
+    return { ok: false, error: 'Không thể kết nối API. Lời chúc chưa được cập nhật.' };
   }
 }
 
@@ -279,10 +274,7 @@ export async function approveAllWishes(pin: string): Promise<Result> {
     if (!res.ok) return { ok: false, error: await parseError(res) };
     return { ok: true };
   } catch {
-    const wishes = safeRead<AdminWish[]>(WISH_KEY, []);
-    const updated = wishes.map(w => w.status === 'pending' ? { ...w, status: 'approved' as const } : w);
-    safeWrite(WISH_KEY, updated);
-    return { ok: true, demo: true };
+    return { ok: false, error: 'Không thể kết nối API. Chưa duyệt lời chúc.' };
   }
 }
 
@@ -302,9 +294,7 @@ export async function deleteWish(pin: string, id: number): Promise<Result> {
     if (!res.ok) return { ok: false, error: await parseError(res) };
     return { ok: true };
   } catch {
-    const wishes = safeRead<AdminWish[]>(WISH_KEY, []);
-    safeWrite(WISH_KEY, wishes.filter(w => w.id !== id));
-    return { ok: true, demo: true };
+    return { ok: false, error: 'Không thể kết nối API. Chưa xoá lời chúc.' };
   }
 }
 
@@ -324,8 +314,6 @@ export async function deleteRSVP(pin: string, id: number): Promise<Result> {
     if (!res.ok) return { ok: false, error: await parseError(res) };
     return { ok: true };
   } catch {
-    const rsvps = safeRead<AdminRSVP[]>(RSVP_KEY, []);
-    safeWrite(RSVP_KEY, rsvps.filter(r => r.id !== id));
-    return { ok: true, demo: true };
+    return { ok: false, error: 'Không thể kết nối API. Chưa xoá RSVP.' };
   }
 }
