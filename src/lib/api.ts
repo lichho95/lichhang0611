@@ -121,9 +121,9 @@ export async function sendRSVP(payload: { guest_name: string; attending: boolean
 // ==================== CÁC HÀM QUẢN TRỊ (ADMIN API) ====================
 
 const DEMO_SEED_RSVPS: AdminRSVP[] = [
-  { id: 101, guest_name: 'Trần Văn Hoàng & Bạn', attending: 1, guest_count: 2, event_id: 'ceremony', note: 'Chúc hai bạn trăm năm hạnh phúc!', created_at: '2026-10-18T14:20:00Z' },
-  { id: 102, guest_name: 'Nguyễn Thị Mai', attending: 1, guest_count: 1, event_id: 'reception', note: 'Sẽ có mặt chung vui đúng giờ nhé.', created_at: '2026-10-19T09:15:00Z' },
-  { id: 103, guest_name: 'Lê Quang Huy', attending: 0, guest_count: 0, event_id: 'reception', note: 'Hôm đó mình có lịch công tác, gửi lời chúc mừng 2 bạn từ xa nhé!', created_at: '2026-10-20T11:00:00Z' },
+  { id: 101, guest_name: 'Trần Văn Hoàng & Bạn', attending: 1, guest_count: 2, event_id: 'wedding', note: 'Chúc hai bạn trăm năm hạnh phúc!', created_at: '2026-10-18T14:20:00Z' },
+  { id: 102, guest_name: 'Nguyễn Thị Mai', attending: 1, guest_count: 1, event_id: 'wedding', note: 'Sẽ có mặt chung vui đúng giờ nhé.', created_at: '2026-10-19T09:15:00Z' },
+  { id: 103, guest_name: 'Lê Quang Huy', attending: 0, guest_count: 0, event_id: 'wedding', note: 'Hôm đó mình có lịch công tác, gửi lời chúc mừng 2 bạn từ xa nhé!', created_at: '2026-10-20T11:00:00Z' },
 ];
 
 function getLocalAdminData(): { wishes: AdminWish[]; rsvps: AdminRSVP[]; stats: AdminStats } {

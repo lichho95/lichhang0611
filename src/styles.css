@@ -517,6 +517,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 }
 .hero-names {
   color:#71303d;
+  gap: 15px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -3706,3 +3707,177 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .floating-rsvp-attention::before,
   .floating-rsvp-attention::after { animation: none !important; }
 }
+
+/* =====================================================================
+   RESPONSIVE FIXES — tach phan admin + cai thien UI responsive
+   ===================================================================== */
+
+/* footer-replay dung chung cho button va a */
+a.footer-replay {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 0;
+  color: #e4c3b5;
+  font-size: 11px;
+  letter-spacing: .1em;
+  margin-top: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+a.footer-replay:hover { color: #fff0e8; text-decoration: underline; }
+
+/* Mobile (<=480px) */
+@media (max-width: 480px) {
+  .container { width: min(100%, calc(100% - 24px)); }
+  .hero-content { left: 4%; width: 92%; bottom: 15%; }
+  .hero-names { font-size: clamp(68px, 19vw, 108px); gap: 8px; }
+  .hero-names em { font-size: clamp(50px, 14vw, 72px); }
+  .countdown { gap: 6px; }
+  .countdown-unit { min-width: 0; flex: 1; padding: 0 2px; }
+  .countdown-unit span { font-size: clamp(24px, 7.5vw, 38px); }
+  .calendar-ornament { gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .calendar-ornament::before, .calendar-ornament::after { width: 14px; }
+  .event-card { padding: 30px 16px; }
+  .event-detail { gap: 8px; font-size: 13px; }
+  .formal-invitation { padding: 28px 16px; }
+  .rsvp-form { padding: 28px 16px; }
+  .rsvp-form-top h3 { font-size: 24px; }
+  .wish-letter { width: min(100%, 320px); }
+  .mobile-nav button { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; border: 1px solid var(--wine); color: var(--wine); border-radius: 30px; padding: 12px 20px; font-size: 11px; letter-spacing: .1em; font-weight: 700; }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero-section { height: auto; min-height: 100svh; }
+  .hero-content { bottom: 10%; }
+  .hero-scroll { display: none; }
+}
+
+/* ==========================================================================
+   Toast Notification (Wedding Theme)
+   ========================================================================== */
+.toast-portal-root {
+  position: fixed;
+  top: clamp(82px, 10vw, 96px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 10000;
+  padding: 0 16px;
+}
+
+.wedding-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(100%, 440px);
+  padding: 14px 18px;
+  background: rgba(254, 252, 249, 0.96);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(185, 153, 114, 0.45);
+  border-radius: 18px;
+  box-shadow:
+    0 18px 40px -10px rgba(112, 43, 58, 0.22),
+    0 6px 18px -4px rgba(84, 59, 54, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.wedding-toast-success .toast-icon-wrapper {
+  background: linear-gradient(135deg, #fcedeb 0%, #f7dfd6 100%);
+  border: 1px solid rgba(173, 112, 122, 0.35);
+  color: var(--wine);
+}
+
+.wedding-toast-error .toast-icon-wrapper {
+  background: linear-gradient(135deg, #fbe9e9 0%, #f7d2d2 100%);
+  border: 1px solid rgba(199, 78, 78, 0.35);
+  color: #b92b27;
+}
+
+.wedding-toast-info .toast-icon-wrapper {
+  background: linear-gradient(135deg, #f9f2e9 0%, #f3e5d3 100%);
+  border: 1px solid rgba(185, 153, 114, 0.4);
+  color: #8c6a3e;
+}
+
+.toast-icon-wrapper {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(112, 43, 58, 0.1);
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toast-title {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--wine);
+  line-height: 1.3;
+}
+
+.toast-message {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #543b36;
+  word-break: break-word;
+}
+
+.toast-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #967e73;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+  background: #f4e8de;
+  border-color: #ddc8ba;
+  color: var(--wine);
+}
+
+@media (max-width: 480px) {
+  .wedding-toast {
+    padding: 12px 14px;
+    gap: 11px;
+    border-radius: 16px;
+  }
+  .toast-icon-wrapper {
+    width: 34px;
+    height: 34px;
+  }
+  .toast-title {
+    font-size: 14px;
+  }
+  .toast-message {
+    font-size: 12.5px;
+  }
+}
+

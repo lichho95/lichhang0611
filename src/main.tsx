@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import AdminPage from './pages/AdminPage';
 import './styles.css';
 import { wedding } from './wedding.config';
 
@@ -10,7 +11,11 @@ if (wedding.sections.opening) {
   window.scrollTo(0, 0);
 }
 
+// Routing đơn giản không cần thư viện: chỉ cần phân biệt /admin vs trang chính.
+const isAdminRoute = window.location.pathname.startsWith('/admin');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><App /></React.StrictMode>
+  <React.StrictMode>
+    {isAdminRoute ? <AdminPage /> : <App />}
+  </React.StrictMode>
 );

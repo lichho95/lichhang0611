@@ -9,11 +9,12 @@ import { TurnstileWidget } from './components/TurnstileWidget';
 import { HeartRain } from './components/HeartRain';
 import { MemoryCard } from './components/MemoryCard';
 import { FragmentsHeading } from './components/FragmentsHeading';
-import { AdminDashboard } from './components/AdminDashboard';
+// Admin dashboard moved to /admin route (see src/pages/AdminPage.tsx)
 import { TwoHalvesHeart } from './components/TwoHalvesHeart';
 import { useGentleAutoScroll } from './components/useGentleAutoScroll';
 import { buildCalendarUrl, clampIndex, countdownParts, getGuestName, withLeadingZero } from './lib/utils';
 import { loadWishes, sendRSVP, sendWish, type Wish } from './lib/api';
+import { Toast, type ToastData } from './components/Toast';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const SECTION_IDS = ['home', 'details', 'story', 'gallery', 'wishes', 'gift'] as const;
@@ -304,7 +305,7 @@ function Lightbox({ index, onClose, setIndex }: { index: number; onClose: () => 
   const photo = wedding.gallery[index];
   return <motion.div className="lightbox-backdrop" role="dialog" aria-modal="true" aria-label="Xem album ảnh cưới" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}><button className="lightbox-close" aria-label="Đóng album" onClick={onClose}><X size={24}/></button><div className="lightbox-body" onClick={e=>e.stopPropagation()} onTouchStart={e=>{startX.current=e.changedTouches[0].clientX;}} onTouchEnd={e=>{if(startX.current===null)return;const delta=e.changedTouches[0].clientX-startX.current;if(Math.abs(delta)>45){delta>0?previous():next();}startX.current=null;}}><AnimatePresence mode="wait"><motion.img key={photo.src} className="lightbox-image" src={photo.src} alt={photo.alt} initial={reduced?{opacity:0}:{opacity:0,scale:.97,y:12}} animate={{opacity:1,scale:1,y:0}} exit={reduced?{opacity:0}:{opacity:0,scale:1.015,y:-7}} transition={reduced?{duration:.12}:{duration:.36,ease}}/></AnimatePresence><div className="lightbox-bottom"><button aria-label="Ảnh trước" onClick={previous}><ArrowLeft size={23}/></button><span>{String(index+1).padStart(2,'0')} — {String(total).padStart(2,'0')}</span><button aria-label="Ảnh sau" onClick={next}><ArrowRight size={23}/></button></div></div></motion.div>;
 }
-function WishesSection({ guestName }: { guestName: string }) {
+function WishesSection({ guestName, showToast }: { guestName: string; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [isDemo, setIsDemo] = useState(false);
   const [wishIndex, setWishIndex] = useState(0);
@@ -316,6 +317,14 @@ function WishesSection({ guestName }: { guestName: string }) {
   const [challengeToken, setChallengeToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const closeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
   const refresh = useCallback(async () => { const result = await loadWishes(); setWishes(result.wishes); setIsDemo(result.demo); }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   const active = wishes[wishIndex];
@@ -326,10 +335,21 @@ function WishesSection({ guestName }: { guestName: string }) {
     setBusy(true); setNotice('');
     const result = await sendWish({guest_name:name.trim(),message:message.trim(),website,turnstile_token:challengeToken});
     setBusy(false);
-    if (!result.ok) { setNotice(result.error || 'Có lỗi xảy ra.'); return; }
-    setName(guestName);setMessage('');setWriteOpen(false);
-    setNotice(result.demo ? 'Đã lưu lời chúc ở chế độ xem thử trên thiết bị này.' : result.pending ? 'Đã nhận lời chúc. Lời chúc sẽ xuất hiện sau khi được duyệt.' : 'Cảm ơn bạn! Lời chúc đã được gửi thành công.');
-    await refresh();setWishIndex(0);
+    if (!result.ok) { setNotice(result.error || 'Có lỗi xảy ra. Vui lòng thử lại.'); return; }
+    const toastMessage = result.demo
+      ? 'Đã lưu lời chúc ở chế độ xem thử trên thiết bị này.'
+      : result.pending
+        ? 'Đã nhận lời chúc. Lời chúc sẽ xuất hiện sau khi được duyệt.'
+        : 'Cảm ơn bạn! Lời chúc đã được gửi thành công.';
+    setName(guestName);
+    setMessage('');
+    setNotice('');
+    showToast(toastMessage, 'success', 'Lời chúc từ bạn');
+    closeTimerRef.current = window.setTimeout(() => {
+      setWriteOpen(false);
+    }, 380);
+    await refresh();
+    setWishIndex(0);
   };
   return <section id="wishes" className="wishes-section section-pad"><div className="wishes-grain"/><Floral position="right"/><div className="container wishes-container"><SectionHeading kicker="A LITTLE LOVE FROM EVERYONE" title="Những lời yêu thương" caption="Mỗi lời chúc là một kỷ niệm mà chúng mình sẽ luôn trân trọng."/>
     <Ribbon variant="heart" className="wishes-ribbon"/>
@@ -339,12 +359,11 @@ function WishesSection({ guestName }: { guestName: string }) {
       <div className="wishes-side-note wishes-side-right">LET WORDS BECOME<br/>BEAUTIFUL MEMORIES <Sparkles size={18}/></div>
     </div>
     {isDemo && <p className="demo-caption">Các lời chúc đang hiển thị là dữ liệu minh họa. Khi kết nối Cloudflare D1, lời chúc thật sẽ xuất hiện tại đây.</p>}
-    <div className="last-letter"><p className="script-signature">The next letter could be yours...</p><button className="button button-primary" onClick={()=>setWriteOpen(o=>!o)}>{writeOpen?'Đóng lá thư':'Viết một lời yêu thương'} {writeOpen?<X size={16}/>:<ArrowRight size={16}/>}</button></div>
-<AnimatePresence>{writeOpen && <Modal onClose={()=>setWriteOpen(false)} label="Viết một lời yêu thương"><form className="wish-compose wish-compose-modal" onSubmit={submit}><div className="compose-inner"><div className="eyebrow">A LETTER FROM THE HEART</div><h3>Viết một điều thật đẹp...</h3><label htmlFor="wish-name">Tên của bạn</label><input id="wish-name" maxLength={70} value={name} onChange={e=>setName(e.target.value)} placeholder="Tên người gửi" required/><label htmlFor="wish-message">Lời chúc</label><textarea id="wish-message" maxLength={500} rows={4} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Gửi hai bạn một chút yêu thương..." required/><div className="form-character-count">{message.length}/500</div><div className="honeypot" aria-hidden="true"><label htmlFor="wish-website">Website (để trống)</label><input id="wish-website" value={website} onChange={e=>setWebsite(e.target.value)} tabIndex={-1} autoComplete="off"/></div><TurnstileWidget onToken={setChallengeToken}/><button className="button button-primary" disabled={busy} type="submit">{busy?'Đang gửi...':'Niêm phong & gửi thư'} <Send size={16}/></button></div>{notice && <p role="status" className="form-notice">{notice}</p>}</form></Modal>}</AnimatePresence>
-    {notice && <p className="form-notice" role="status">{notice}</p>}
+    <div className="last-letter"><p className="script-signature">The next letter could be yours...</p><button className="button button-primary" onClick={()=>{setNotice('');setWriteOpen(o=>!o);}}>{writeOpen?'Đóng lá thư':'Viết một lời yêu thương'} {writeOpen?<X size={16}/>:<ArrowRight size={16}/>}</button></div>
+<AnimatePresence>{writeOpen && <Modal onClose={()=>{setNotice('');setWriteOpen(false);}} label="Viết một lời yêu thương"><form className="wish-compose wish-compose-modal" onSubmit={submit}><div className="compose-inner"><div className="eyebrow">A LETTER FROM THE HEART</div><h3>Viết một điều thật đẹp...</h3><label htmlFor="wish-name">Tên của bạn</label><input id="wish-name" maxLength={70} value={name} onChange={e=>setName(e.target.value)} placeholder="Tên người gửi" required/><label htmlFor="wish-message">Lời chúc</label><textarea id="wish-message" maxLength={500} rows={4} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Gửi hai bạn một chút yêu thương..." required/><div className="form-character-count">{message.length}/500</div><div className="honeypot" aria-hidden="true"><label htmlFor="wish-website">Website (để trống)</label><input id="wish-website" value={website} onChange={e=>setWebsite(e.target.value)} tabIndex={-1} autoComplete="off"/></div><TurnstileWidget onToken={setChallengeToken}/><button className="button button-primary" disabled={busy} type="submit">{busy?'Đang gửi...':'Niêm phong & gửi thư'} <Send size={16}/></button></div>{notice && <p role="status" className="form-notice">{notice}</p>}</form></Modal>}</AnimatePresence>
   </div></section>;
 }
-function RSVPForm({ guestName, onConfirmed }: { guestName: string; onConfirmed: () => void }) {
+function RSVPForm({ guestName, onConfirmed, onClose, showToast }: { guestName: string; onConfirmed: () => void; onClose: () => void; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
   const [name,setName]=useState(guestName);
   const [attending,setAttending]=useState(true);
   const [note,setNote]=useState('');
@@ -352,6 +371,14 @@ function RSVPForm({ guestName, onConfirmed }: { guestName: string; onConfirmed: 
   const [challengeToken,setChallengeToken]=useState('');
   const [busy,setBusy]=useState(false);
   const [feedback,setFeedback]=useState('');
+  const closeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
   const submit=async(e:FormEvent<HTMLFormElement>)=>{
     e.preventDefault();
     if(name.trim().length<2){setFeedback('Vui lòng nhập tên tối thiểu 2 ký tự.');return;}
@@ -360,8 +387,21 @@ function RSVPForm({ guestName, onConfirmed }: { guestName: string; onConfirmed: 
     // một người nếu đến, 0 nếu vắng, event_id chung để quản trị biết đây là RSVP toàn lễ cưới.
     const response=await sendRSVP({guest_name:name.trim(),attending,guest_count:attending?1:0,event_id:'wedding',note:note.trim(),website,turnstile_token:challengeToken});
     setBusy(false);
-    setFeedback(!response.ok ? response.error||'Có lỗi xảy ra.' : response.demo ? 'Đã lưu xác nhận ở chế độ xem thử trên thiết bị này. Khi kết nối D1 mới gửi thật được.' : 'Cảm ơn bạn! Chúng mình đã nhận được xác nhận.');
-    if(response.ok){setNote('');onConfirmed();}
+    if (!response.ok) {
+      setFeedback(response.error || 'Có lỗi xảy ra. Vui lòng thử lại.');
+      return;
+    }
+    const toastMsg = response.demo
+      ? 'Đã lưu xác nhận ở chế độ xem thử trên thiết bị này.'
+      : attending
+        ? 'Cảm ơn bạn! Chúng mình đã nhận được lời xác nhận tham dự.'
+        : 'Cảm ơn bạn! Chúng mình đã nhận được lời hồi âm.';
+    setNote('');
+    onConfirmed();
+    showToast(toastMsg, 'success', attending ? 'Xác nhận tham dự' : 'Hồi âm tham dự');
+    closeTimerRef.current = window.setTimeout(() => {
+      onClose();
+    }, 380);
   };
   return <div className="rsvp-modal-body"><p className="rsvp-modal-caption">Một lời hồi âm nhỏ từ bạn sẽ khiến ngày vui thêm trọn vẹn ♡</p>
     <motion.form className="rsvp-form" onSubmit={submit} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.42,ease}}>
@@ -432,10 +472,10 @@ function Modal({ onClose, label, children, delay=0, variant }: { onClose: () => 
     </motion.div>
   </motion.div>,document.body);
 }
-function Footer({ onReplay, onOpenAdmin }: { onReplay: () => void; onOpenAdmin: () => void }) {
+function Footer({ onReplay }: { onReplay: () => void }) {
   const [shared,setShared]=useState(false);
   const share=async()=>{try {if(navigator.share)await navigator.share({title:'Thiệp cưới',text:'Trân trọng kính mời bạn đến chung vui!',url:window.location.href});else {await navigator.clipboard.writeText(window.location.href);setShared(true);setTimeout(()=>setShared(false),2500);}}catch{/* user cancelled share */}};
-  return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">THE BEGINNING OF OUR FOREVER</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><button className="footer-replay" onClick={onReplay}><RotateCcw size={15}/> Xem lại hiệu ứng mở thiệp</button><button className="footer-replay" onClick={onOpenAdmin} style={{ opacity: 0.65, fontSize: '0.8rem', marginTop: '4px' }}><Lock size={13}/> Quản trị thiệp</button><span className="footer-made">MADE WITH LOVE · THE LIVING RIBBON</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
+  return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">THE BEGINNING OF OUR FOREVER</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><button className="footer-replay" onClick={onReplay}><RotateCcw size={15}/> Xem lại hiệu ứng mở thiệp</button><a className="footer-replay" href="/admin" style={{ opacity: 0.65, fontSize: '0.8rem', marginTop: '4px', display:'inline-flex', alignItems:'center', gap:'6px' }}><Lock size={13}/> Quản trị thiệp</a><span className="footer-made">MADE WITH LOVE · THE LIVING RIBBON</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
 }
 export default function App() {
   const [guestName] = useState(getGuestName);
@@ -449,6 +489,27 @@ export default function App() {
   const [rsvpOpen, setRsvpOpen] = useState(false);
   const [rsvpVisible, setRsvpVisible] = useState(false);
   const [rsvpConfirmed, setRsvpConfirmed] = useState(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success', title?: string) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    setToast({ id: Date.now(), message, type, title });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 4800);
+  }, []);
+
+  const hideToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast(null);
+  }, []);
   // Nút nhỏ chỉ xuất hiện khi khách đã đọc qua phần thiệp; không tự mở popup.
   useEffect(() => {
     const check = () => {
@@ -462,36 +523,10 @@ export default function App() {
     check();
     return () => { window.removeEventListener('scroll', check);window.removeEventListener('resize',check); };
   }, [animationCycle]);
-  const [showAdmin, setShowAdmin] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const path = window.location.pathname;
-    const params = new URLSearchParams(window.location.search);
-    return path.startsWith('/admin') || params.has('admin');
-  });
-
-  const openAdmin = () => {
-    setShowAdmin(true);
-    const url = new URL(window.location.href);
-    url.searchParams.set('admin', '1');
-    window.history.pushState({}, '', url.pathname + url.search);
-  };
-
-  const closeAdmin = () => {
-    setShowAdmin(false);
-    if (window.location.pathname.startsWith('/admin')) {
-      window.history.pushState({}, '', '/');
-    } else {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has('admin')) {
-        url.searchParams.delete('admin');
-        window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
-      }
-    }
-  };
   // Auto-preview nhẹ khi khách mở thiệp và không thao tác; click/scroll/touch để dừng hẳn.
-  // Không chạy trong Admin, các popup, lightbox hoặc khi người dùng bật Reduced Motion.
+  // Không chạy trong các popup, lightbox hoặc khi người dùng bật Reduced Motion.
   useGentleAutoScroll({
-    enabled: opened && !showAdmin && wedding.effects.autoStoryScroll,
+    enabled: opened && wedding.effects.autoStoryScroll,
     idleDelayMs: wedding.effects.autoScrollIdleMs,
     intervalMs: wedding.effects.autoScrollIntervalMs,
     stepViewport: wedding.effects.autoScrollStepViewport,
@@ -528,13 +563,13 @@ export default function App() {
       {(wedding.sections.couple || wedding.sections.events || wedding.sections.countdown) && <WeddingInvitation guestName={guestName}/>}
       {wedding.sections.story && <><JourneyTransition number="01" title="Chuyện chúng mình" motif="heart"/><StorySection/></>}
       {wedding.sections.gallery && <><JourneyTransition number="02" title="Những khung hình yêu" motif="loop"/><GallerySection onPhotoOpen={setLightbox} onVideoOpen={()=>setVideoOpen(true)}/></>}
-      {wedding.sections.wishes && <><JourneyTransition number="03" title="Những lá thư yêu thương" motif="letter"/><WishesSection guestName={guestName}/></>}
+      {wedding.sections.wishes && <><JourneyTransition number="03" title="Những lá thư yêu thương" motif="letter"/><WishesSection guestName={guestName} showToast={showToast}/></>}
       {wedding.sections.gift && <><JourneyTransition number="04" title="Một chút yêu thương" motif="bow"/><GiftSection/></>}
     </main>
-    <Footer onReplay={replayStory} onOpenAdmin={openAdmin}/>
+    <Footer onReplay={replayStory}/>
     {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>
-      {opened && wedding.sections.rsvp && rsvpVisible && !rsvpOpen && !showAdmin &&
+      {opened && wedding.sections.rsvp && rsvpVisible && !rsvpOpen &&
         <motion.div className="floating-rsvp-dock"
           initial={{opacity:0,x:22,scale:.9}} animate={{opacity:1,x:0,scale:1}} exit={{opacity:0,x:20,scale:.92}}
           transition={{duration:.55,ease}}>
@@ -546,11 +581,11 @@ export default function App() {
         </motion.div>}
     </AnimatePresence>
     <AnimatePresence>
-      {rsvpOpen && !showAdmin && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự" variant="rsvp"><RSVPForm guestName={guestName} onConfirmed={()=>setRsvpConfirmed(true)}/></Modal>}
+      {rsvpOpen && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự" variant="rsvp"><RSVPForm guestName={guestName} onConfirmed={()=>setRsvpConfirmed(true)} onClose={()=>setRsvpOpen(false)} showToast={showToast}/></Modal>}
     </AnimatePresence>
     <AnimatePresence>{lightbox!==null && <Lightbox index={lightbox} setIndex={setLightbox} onClose={()=>setLightbox(null)}/>}</AnimatePresence>
     <AnimatePresence>{videoOpen && Boolean(wedding.videoEmbedUrl) && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${String(wedding.videoEmbedUrl).includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
-    {showAdmin && <AdminDashboard onClose={closeAdmin}/>}
+    <Toast toast={toast} onClose={hideToast} />
     <div className="sr-only">Các mục: {SECTION_IDS.join(', ')}</div>
   </>;
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Check, X, Mail, Users, Calendar, Search, Download, Copy, Trash2,
-  RefreshCw, Lock, ArrowLeft, AlertCircle, CheckCircle2, Clock,
+  Check, X, Mail, Users, Search, Download, Copy, Trash2,
+  RefreshCw, Lock, ArrowLeft, AlertCircle, CheckCircle2,
   EyeOff, CheckCheck, ShieldCheck, LogOut
 } from 'lucide-react';
 import { wedding } from '../wedding.config';
@@ -34,7 +34,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [wishFilter, setWishFilter] = useState<'all' | 'pending' | 'approved' | 'hidden'>('pending');
   const [rsvpSearch, setRsvpSearch] = useState('');
   const [rsvpStatusFilter, setRsvpStatusFilter] = useState<'all' | 'attending' | 'declined'>('all');
-  const [rsvpEventFilter, setRsvpEventFilter] = useState<string>('all');
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -167,7 +166,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
       const isAttending = r.attending === 1 || r.attending === true;
       if (rsvpStatusFilter === 'attending' && !isAttending) return false;
       if (rsvpStatusFilter === 'declined' && isAttending) return false;
-      if (rsvpEventFilter !== 'all' && r.event_id !== rsvpEventFilter) return false;
       if (rsvpSearch.trim()) {
         const query = rsvpSearch.toLowerCase();
         const matchName = r.guest_name.toLowerCase().includes(query);
@@ -176,7 +174,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
       }
       return true;
     });
-  }, [rsvps, rsvpStatusFilter, rsvpEventFilter, rsvpSearch]);
+  }, [rsvps, rsvpStatusFilter, rsvpSearch]);
 
   const pendingCount = useMemo(() => {
     return wishes.filter(w => w.status === 'pending').length;
@@ -184,15 +182,11 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   // Xuất file CSV
   const handleExportCSV = () => {
-    const eventMap = new Map<string, string>(
-      [...((wedding.events as readonly { id: string; label: string }[]).map(e => [e.id, e.label]) as [string, string][]), ['wedding', 'Toàn bộ lễ cưới']]
-    );
-    const headers = ['STT', 'Họ và tên khách', 'Trạng thái', 'Số khách tham dự', 'Sự kiện tham dự', 'Lời nhắn / Ghi chú', 'Thời gian gửi'];
+    const headers = ['STT', 'Họ và tên khách', 'Trạng thái', 'Số khách tham dự', 'Lời nhắn / Ghi chú', 'Thời gian gửi'];
     const rows = filteredRsvps.map((r, i) => {
       const isAttending = r.attending === 1 || r.attending === true;
       const statusText = isAttending ? 'Tham dự' : 'Báo vắng';
       const guestCount = isAttending ? String(r.guest_count) : '0';
-      const eventLabel = eventMap.get(r.event_id) || r.event_id;
       const note = (r.note || '').replace(/"/g, '""');
       const time = new Date(r.created_at).toLocaleString('vi-VN');
       return [
@@ -200,7 +194,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
         `"${r.guest_name.replace(/"/g, '""')}"`,
         `"${statusText}"`,
         guestCount,
-        `"${eventLabel.replace(/"/g, '""')}"`,
         `"${note}"`,
         `"${time}"`
       ].join(',');
@@ -221,9 +214,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   // Sao chép danh sách tóm tắt gửi Zalo/Chat
   const handleCopySummary = async () => {
-    const eventMap = new Map<string, string>(
-      [...((wedding.events as readonly { id: string; label: string }[]).map(e => [e.id, e.label]) as [string, string][]), ['wedding', 'Toàn bộ lễ cưới']]
-    );
     const attendingList = rsvps.filter(r => r.attending === 1 || r.attending === true);
     const declinedList = rsvps.filter(r => r.attending === 0 || r.attending === false);
 
@@ -235,9 +225,8 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
 
     text += `✅ DANH SÁCH THAM DỰ (${attendingList.length} phản hồi):\n`;
     attendingList.forEach((r, idx) => {
-      const eventLabel = eventMap.get(r.event_id) || r.event_id;
       const noteText = r.note ? `\n   💬 Lời nhắn: "${r.note}"` : '';
-      text += `${idx + 1}. ${r.guest_name} — ${r.guest_count} người [${eventLabel}]${noteText}\n`;
+      text += `${idx + 1}. ${r.guest_name} — ${r.guest_count} người${noteText}\n`;
     });
 
     if (declinedList.length > 0) {
@@ -425,84 +414,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
       {/* Thân bảng điều khiển (Scrollable) */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          {/* Thẻ Thống Kê Tổng Quan (KPIs) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {/* 1. Khách Tham Dự */}
-            <div className="bg-white border border-[#ddc8ba] rounded-2xl p-4 shadow-xs">
-              <div className="flex items-center justify-between text-[#967e73] mb-2">
-                <span className="text-xs font-medium uppercase tracking-wider">Khách tham dự</span>
-                <Users size={18} className="text-[#702b3a]" />
-              </div>
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-[#702b3a]">
-                {stats?.total_attending_guests ?? 0}
-                <span className="text-xs font-sans font-normal text-[#967e73] ml-1.5">suất/khách</span>
-              </div>
-              <p className="text-[11px] text-[#967e73] mt-1">
-                Từ {stats?.attending_responses ?? 0} lượt phản hồi đồng ý
-              </p>
-            </div>
 
-            {/* 2. Báo Vắng */}
-            <div className="bg-white border border-[#ddc8ba] rounded-2xl p-4 shadow-xs">
-              <div className="flex items-center justify-between text-[#967e73] mb-2">
-                <span className="text-xs font-medium uppercase tracking-wider">Báo vắng</span>
-                <X size={18} className="text-[#967e73]" />
-              </div>
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-[#543b36]">
-                {stats?.declined_responses ?? 0}
-                <span className="text-xs font-sans font-normal text-[#967e73] ml-1.5">người</span>
-              </div>
-              <p className="text-[11px] text-[#967e73] mt-1">
-                {stats?.total_rsvps ?? 0} tổng lượt phản hồi RSVP
-              </p>
-            </div>
-
-            {/* 3. Lời Chúc Chờ Duyệt */}
-            <div
-              className={`border rounded-2xl p-4 shadow-xs transition-colors ${
-                pendingCount > 0
-                  ? 'bg-amber-50/70 border-amber-200 text-amber-900'
-                  : 'bg-white border-[#ddc8ba] text-[#543b36]'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium uppercase tracking-wider">Chờ duyệt</span>
-                <Clock size={18} className={pendingCount > 0 ? 'text-amber-600' : 'text-[#967e73]'} />
-              </div>
-              <div className="flex items-baseline justify-between">
-                <div className="font-serif text-2xl sm:text-3xl font-bold">
-                  {pendingCount}
-                  <span className="text-xs font-sans font-normal text-[#967e73] ml-1.5">lời chúc</span>
-                </div>
-                {pendingCount > 0 && (
-                  <button
-                    onClick={handleApproveAll}
-                    className="text-[11px] font-semibold text-[#702b3a] hover:underline"
-                  >
-                    Duyệt hết
-                  </button>
-                )}
-              </div>
-              <p className="text-[11px] text-[#967e73] mt-1">
-                {pendingCount > 0 ? 'Cần duyệt để hiển thị lên web' : 'Tất cả đã được duyệt'}
-              </p>
-            </div>
-
-            {/* 4. Tổng Lời Chúc Đã Đăng */}
-            <div className="bg-white border border-[#ddc8ba] rounded-2xl p-4 shadow-xs">
-              <div className="flex items-center justify-between text-[#967e73] mb-2">
-                <span className="text-xs font-medium uppercase tracking-wider">Đang hiển thị</span>
-                <Mail size={18} className="text-emerald-600" />
-              </div>
-              <div className="font-serif text-2xl sm:text-3xl font-bold text-emerald-800">
-                {stats?.wishes_approved ?? 0}
-                <span className="text-xs font-sans font-normal text-[#967e73] ml-1.5">
-                  / {stats?.total_wishes ?? 0}
-                </span>
-              </div>
-              <p className="text-[11px] text-[#967e73] mt-1">Đã công khai trên dải lụa</p>
-            </div>
-          </div>
 
           {/* Tab Navigation */}
           <div className="flex items-center gap-2 border-b border-[#ddc8ba] pb-1">
@@ -662,30 +574,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
           {/* NỘI DUNG TAB 2: DANH SÁCH KHÁCH MỜI (RSVP) */}
           {activeTab === 'rsvps' && (
             <div className="space-y-4">
-              {/* Thống kê chi tiết theo sự kiện */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {[{id:'wedding',label:'Toàn bộ lễ cưới'},...wedding.events].map(evt => {
-                  const evtStats = stats?.events?.find(e => e.event_id === evt.id);
-                  const count = evtStats?.count ?? rsvps.filter(r => (r.attending === 1 || r.attending === true) && r.event_id === evt.id).length;
-                  const guests = evtStats?.guests ?? rsvps
-                    .filter(r => (r.attending === 1 || r.attending === true) && r.event_id === evt.id)
-                    .reduce((s, r) => s + (Number(r.guest_count) || 1), 0);
 
-                  return (
-                    <div key={evt.id} className="bg-white border border-[#ddc8ba] rounded-2xl p-4 shadow-xs">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-[#702b3a] mb-1">
-                        <Calendar size={14} /> {evt.label}
-                      </div>
-                      <div className="text-xl font-bold font-serif text-[#543b36]">
-                        {guests} <span className="text-xs font-sans font-normal text-[#967e73]">khách</span>
-                      </div>
-                      <div className="text-[11px] text-[#967e73] mt-0.5">
-                        {count} lượt chọn sự kiện này
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
 
               {/* Thanh tìm kiếm & lọc */}
               <div className="bg-white p-3 sm:p-4 rounded-2xl border border-[#ddc8ba] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
@@ -709,17 +598,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                     <option value="all">Tất cả trạng thái</option>
                     <option value="attending">Sẽ tham dự</option>
                     <option value="declined">Báo vắng</option>
-                  </select>
-
-                  <select
-                    value={rsvpEventFilter}
-                    onChange={e => setRsvpEventFilter(e.target.value)}
-                    className="px-3 py-2 text-xs bg-[#fbf9f5] border border-[#ddc8ba] rounded-xl text-[#543b36] focus:outline-none"
-                  >
-                    <option value="all">Mọi sự kiện</option>
-                    {[{id:'wedding',label:'Toàn bộ lễ cưới'},...wedding.events].map(evt => (
-                      <option key={evt.id} value={evt.id}>{evt.label}</option>
-                    ))}
                   </select>
                 </div>
 
@@ -754,7 +632,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                           <th className="py-3 px-4">Tên Khách Mời</th>
                           <th className="py-3 px-4">Trạng Thái</th>
                           <th className="py-3 px-4">Số Khách</th>
-                          <th className="py-3 px-4">Sự Kiện</th>
                           <th className="py-3 px-4">Lời Nhắn / Ghi Chú</th>
                           <th className="py-3 px-4">Thời Gian</th>
                           <th className="py-3 px-3 text-right">Xóa</th>
@@ -763,8 +640,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <tbody className="divide-y divide-[#f0e4dc]">
                         {filteredRsvps.map(r => {
                           const isAttending = r.attending === 1 || r.attending === true;
-                          const eventObj = wedding.events.find(e => e.id === r.event_id);
-                          const eventLabel = r.event_id === 'wedding' ? 'Toàn bộ lễ cưới' : eventObj?.label || r.event_id;
 
                           return (
                             <tr key={r.id} className="hover:bg-[#faf7f0] transition-colors">
@@ -785,9 +660,6 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                               </td>
                               <td className="py-3.5 px-4 font-mono font-medium">
                                 {isAttending ? `${r.guest_count} người` : '—'}
-                              </td>
-                              <td className="py-3.5 px-4 text-[#967e73] font-medium">
-                                {eventLabel}
                               </td>
                               <td className="py-3.5 px-4 max-w-xs truncate text-[#543b36]" title={r.note}>
                                 {r.note || <span className="text-gray-300 italic">Không có</span>}
