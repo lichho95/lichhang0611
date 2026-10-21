@@ -334,6 +334,7 @@ export default function App() {
   const [playing,setPlaying]=useState(false);
   const [lightbox,setLightbox]=useState<number|null>(null);
   const [videoOpen,setVideoOpen]=useState(false);
+  const videoEmbedUrl: string = wedding.videoEmbedUrl;
   const audioRef=useRef<HTMLAudioElement>(null);
   useEffect(()=>{if(!opened){window.scrollTo({top:0,behavior:'auto'});document.body.style.overflow='hidden';return()=>{document.body.style.overflow='';};}},[opened]);
   const enter=()=>{setHeroRevealed(true);setOpened(true);};
@@ -372,7 +373,7 @@ export default function App() {
     <Footer onReplay={replayStory}/>
     {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>{lightbox!==null && <Lightbox index={lightbox} setIndex={setLightbox} onClose={()=>setLightbox(null)}/>}</AnimatePresence>
-    <AnimatePresence>{videoOpen && wedding.videoEmbedUrl && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${wedding.videoEmbedUrl.includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
+    <AnimatePresence>{videoOpen && videoEmbedUrl && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${videoEmbedUrl}${videoEmbedUrl.includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
     <div className="sr-only">Các mục: {SECTION_IDS.join(', ')}</div>
   </>;
 }
