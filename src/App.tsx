@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion, useInView, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, RotateCcw, CalendarDays, Check, Copy, Gift, Heart, Mail, MapPin, Menu, Music2, Pause, Play, Send, Sparkles, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, RotateCcw, CalendarDays, Check, Copy, Gift, Heart, Lock, Mail, MapPin, Menu, Music2, Pause, Play, Send, Sparkles, X } from 'lucide-react';
 import { wedding } from './wedding.config';
 import { Ribbon } from './components/Ribbon';
 import { JourneyTransition } from './components/JourneyTransition';
@@ -8,6 +8,7 @@ import { TurnstileWidget } from './components/TurnstileWidget';
 import { HeartRain } from './components/HeartRain';
 import { MemoryCard } from './components/MemoryCard';
 import { FragmentsHeading } from './components/FragmentsHeading';
+import { AdminDashboard } from './components/AdminDashboard';
 import { buildCalendarUrl, clampIndex, countdownParts, getGuestName, withLeadingZero } from './lib/utils';
 import { loadWishes, sendRSVP, sendWish, type Wish } from './lib/api';
 
@@ -345,10 +346,10 @@ function Modal({ onClose, label, children, delay=0 }: { onClose: () => void; lab
   useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',key);document.body.style.overflow='hidden';return()=>{window.removeEventListener('keydown',key);document.body.style.overflow='';};},[onClose]);
   return <motion.div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={label} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0,transition:{duration:.22,delay:0}}} transition={{duration:.28,delay}} onClick={onClose}><motion.div className="modal-card" onClick={e=>e.stopPropagation()} initial={{opacity:0,y:35,scale:.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:20,scale:.98,transition:{duration:.2,delay:0}}} transition={{duration:.35,delay,ease}}><button className="modal-close" onClick={onClose} aria-label="Đóng"><X size={22}/></button>{children}</motion.div></motion.div>;
 }
-function Footer({ onReplay }: { onReplay: () => void }) {
+function Footer({ onReplay, onOpenAdmin }: { onReplay: () => void; onOpenAdmin: () => void }) {
   const [shared,setShared]=useState(false);
   const share=async()=>{try {if(navigator.share)await navigator.share({title:'Thiệp cưới',text:'Trân trọng kính mời bạn đến chung vui!',url:window.location.href});else {await navigator.clipboard.writeText(window.location.href);setShared(true);setTimeout(()=>setShared(false),2500);}}catch{/* user cancelled share */}};
-  return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">THE BEGINNING OF OUR FOREVER</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><button className="footer-replay" onClick={onReplay}><RotateCcw size={15}/> Xem lại hiệu ứng mở thiệp</button><span className="footer-made">MADE WITH LOVE · THE LIVING RIBBON</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
+  return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">THE BEGINNING OF OUR FOREVER</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><button className="footer-replay" onClick={onReplay}><RotateCcw size={15}/> Xem lại hiệu ứng mở thiệp</button><button className="footer-replay" onClick={onOpenAdmin} style={{ opacity: 0.65, fontSize: '0.8rem', marginTop: '4px' }}><Lock size={13}/> Quản trị thiệp</button><span className="footer-made">MADE WITH LOVE · THE LIVING RIBBON</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
 }
 export default function App() {
   const [guestName] = useState(getGuestName);
@@ -359,6 +360,32 @@ export default function App() {
   const [playing,setPlaying]=useState(false);
   const [lightbox,setLightbox]=useState<number|null>(null);
   const [videoOpen,setVideoOpen]=useState(false);
+  const [showAdmin, setShowAdmin] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    return path.startsWith('/admin') || params.has('admin');
+  });
+
+  const openAdmin = () => {
+    setShowAdmin(true);
+    const url = new URL(window.location.href);
+    url.searchParams.set('admin', '1');
+    window.history.pushState({}, '', url.pathname + url.search);
+  };
+
+  const closeAdmin = () => {
+    setShowAdmin(false);
+    if (window.location.pathname.startsWith('/admin')) {
+      window.history.pushState({}, '', '/');
+    } else {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('admin')) {
+        url.searchParams.delete('admin');
+        window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
+      }
+    }
+  };
   const audioRef=useRef<HTMLAudioElement>(null);
   useEffect(()=>{if(!opened){window.scrollTo({top:0,behavior:'auto'});document.body.style.overflow='hidden';return()=>{document.body.style.overflow='';};}},[opened]);
   const enter=()=>{setHeroRevealed(true);setOpened(true);};
@@ -394,10 +421,11 @@ export default function App() {
       {wedding.sections.rsvp && <><JourneyTransition number="06" title="Hẹn gặp vào ngày vui" motif="loop"/><RSVPSection guestName={guestName}/></>}
       {wedding.sections.gift && <><JourneyTransition number="07" title="Một chút yêu thương" motif="bow"/><GiftSection/></>}
     </main>
-    <Footer onReplay={replayStory}/>
+    <Footer onReplay={replayStory} onOpenAdmin={openAdmin}/>
     {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>{lightbox!==null && <Lightbox index={lightbox} setIndex={setLightbox} onClose={()=>setLightbox(null)}/>}</AnimatePresence>
-    <AnimatePresence>{videoOpen && wedding.videoEmbedUrl && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${wedding.videoEmbedUrl.includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
+    <AnimatePresence>{videoOpen && Boolean(wedding.videoEmbedUrl) && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${String(wedding.videoEmbedUrl).includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
+    {showAdmin && <AdminDashboard onClose={closeAdmin}/>}
     <div className="sr-only">Các mục: {SECTION_IDS.join(', ')}</div>
   </>;
 }

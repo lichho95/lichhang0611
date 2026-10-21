@@ -104,24 +104,35 @@ Cloudflare Dashboard → **Workers & Pages** → project thiệp cưới → **S
 
 Không cần `wrangler.jsonc` để triển khai theo cách trên. Có `wrangler.example.jsonc` làm tài liệu cho người thích quản lý binding bằng cấu hình — phải thay Database ID trước khi dùng.
 
-### Lời chúc: duyệt thủ công mặc định
+### Lời chúc & RSVP: Trang Quản trị Mini (Admin Portal)
 
-Ở Settings → Environment Variables, thêm `MODERATE_WISHES=true` (mặc định cũng là true). Lời chúc mới sẽ có trạng thái `pending`, chưa công khai. Khi muốn duyệt, chạy:
+Website tích hợp sẵn **Trang Quản trị Mini bí mật** để cô dâu & chú rể xem số lượng đăng ký và duyệt lời chúc ngay trên điện thoại hoặc máy tính:
+
+- **Cách truy cập**:
+  - Truy cập URL: `http://localhost:5173/admin` (hoặc thêm query `?admin=1`).
+  - Hoặc kéo xuống chân trang (Footer) và bấm vào nút **"Quản trị thiệp"** (kế bên "Xem lại hiệu ứng mở thiệp").
+- **Mã PIN**:
+  - Mặc định ở chế độ demo/local: `123456`.
+  - Trên Cloudflare Pages: Vào **Settings → Variables and Secrets** → thêm biến **`ADMIN_PIN`** với mật mã riêng của hai bạn (ví dụ: `889966`).
+- **Tính năng nổi bật**:
+  - 👥 **Thống kê đăng ký RSVP**: Đếm tổng số khách tham dự, số người vắng mặt, số suất cỗ theo từng sự kiện (Lễ cưới, Tiệc cưới...).
+  - 📥 **Xuất Excel / CSV**: Tải danh sách khách mời (có hỗ trợ UTF-8 tiếng Việt không lỗi font) hoặc bấm **"Sao chép gửi Zalo"** để gửi nhanh cho gia đình/nhà hàng.
+  - 💌 **Duyệt lời chúc 1-chạm**: Phân loại theo tab (Chờ duyệt / Đã duyệt / Đã ẩn), có nút **"Duyệt tất cả"** để duyệt hàng loạt chỉ trong 1 giây.
+
+Nếu muốn duyệt bằng terminal như trước, bạn vẫn có thể chạy lệnh:
 
 ```bash
 npx wrangler d1 execute wedding-db --remote --command="SELECT id, guest_name, message, status FROM wishes ORDER BY id DESC LIMIT 30"
 npx wrangler d1 execute wedding-db --remote --command="UPDATE wishes SET status='approved' WHERE id=1"
 ```
 
-Đổi `id=1` thành ID cần duyệt. Nếu muốn hiển thị ngay khi gửi, thêm `MODERATE_WISHES=false` trong môi trường Pages rồi redeploy. **Nên giữ chế độ duyệt** cho trang mở công khai.
-
-Xem RSVP:
+Xem RSVP qua terminal:
 
 ```bash
 npx wrangler d1 execute wedding-db --remote --command="SELECT guest_name, attending, guest_count, event_id, note, created_at FROM rsvps ORDER BY id DESC"
 ```
 
-**Quyền riêng tư:** D1 chỉ truy cập qua server Function, KHÔNG đặt URL DB hoặc admin token trong frontend. Không lưu số điện thoại hoặc dữ liệu nhạy cảm không cần thiết.
+**Quyền riêng tư:** D1 chỉ truy cập qua server Function, KHÔNG đặt URL DB trong frontend. Mọi thao tác quản trị đều xác thực qua `ADMIN_PIN`.
 
 ## 6. Bảo vệ form khỏi spam — Turnstile (nên bật trước khi public)
 
@@ -140,14 +151,16 @@ src/
   styles.css                # Design system, responsive, hiệu ứng CSS
   wedding.config.ts         # 🔥 SỬA Ở ĐÂY để cá nhân hoá
   lib/
-    api.ts                  # API D1 / localStorage demo
+    api.ts                  # API D1 / localStorage demo & Admin API
     utils.ts                # Count down, link calendar, tên khách
   components/
+    AdminDashboard.tsx      # 🔐 Trang quản trị mini (duyệt lời chúc, thống kê RSVP)
     Ribbon.tsx              # Vẽ dải lụa SVG theo scroll
     TurnstileWidget.tsx     # Xác minh anti-spam (tuỳ chọn)
 server/
   common.js                 # Validate + Turnstile phía máy chủ
 functions/api/
+  admin.js                  # GET/POST /api/admin (xác thực PIN & thao tác D1)
   wishes.js                 # GET /api/wishes, POST /api/wishes
   rsvp.js                   # POST /api/rsvp
 public/images/              # Ảnh minh hoạ: thay bằng ảnh thật
@@ -158,7 +171,7 @@ wrangler.example.jsonc      # Ví dụ cấu hình Cloudflare
 
 ## 8. Lưu ý trước khi chia sẻ rộng rãi
 
-- Đây là một website thiệp cưới **cá nhân**, không có Admin Dashboard. Duyệt lời chúc hoặc xem RSVP qua Wrangler/D1 Dashboard.
+- Website đã tích hợp **Trang Quản trị Mini** (`/admin` hoặc `?admin=1`), đăng nhập bằng mã PIN bí mật.
 - Tên, ngày, sự kiện và hình ảnh trong project là **dữ liệu demo**; hãy thay toàn bộ trước khi public.
 - **Mốc lịch nhỏ** trong `EventsSection` được sinh tự động theo `wedding.date` với múi giờ Việt Nam.
 - Video chỉ hiện nếu có URL embed thật; âm nhạc chỉ hiện nút khi `musicUrl` có tệp thật; QR không giả lập số tài khoản.
