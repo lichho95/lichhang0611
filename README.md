@@ -179,3 +179,7 @@ Xem `docs/ANIMATION_V4_CHANGELOG.md` để biết cơ chế, tùy chỉnh và ph
 - Không cần asset mới. Thay ảnh trong `src/wedding.config.ts` (ảnh story WebP **900 × 1100 px**, <250 KB).
 - Tắt chim bằng `effects.doveMessengers: false` (tim rơi có tùy chọn riêng `effects.heartRain`).
 - Xem `docs/DOVE_ANIMATION_V5.md` để chỉnh quỹ đạo và thời gian.
+
+
+### Bản sửa V6.1
+Khôi phục vòng khoanh ngày cưới và bỏ bộ lọc làm ảnh demo bị tối/xỉn. Chi tiết: `docs/IMAGE_CLARITY_AND_CALENDAR_V6_1.md`.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
+import { AnimatePresence, motion, useInView, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, RotateCcw, CalendarDays, Check, Copy, Gift, Heart, Mail, MapPin, Menu, Music2, Pause, Play, Send, Sparkles, X } from 'lucide-react';
 import { wedding } from './wedding.config';
 import { Ribbon } from './components/Ribbon';
@@ -189,10 +189,35 @@ function Countdown() {
   useEffect(() => { const id = window.setInterval(() => setParts(countdownParts(wedding.date)), 1000); return () => window.clearInterval(id); }, []);
   return <div className="countdown" aria-label="Đếm ngược đến ngày cưới">{parts.ended ? <span className="countdown-ended">Today is our forever ♡</span> : [ ['Ngày',parts.days], ['Giờ',parts.hours], ['Phút',parts.minutes], ['Giây',parts.seconds] ].map(([label,n]) => <div className="countdown-unit" key={label}><span>{withLeadingZero(Number(n))}</span><small>{label}</small></div>)}</div>;
 }
+/**
+ * The ring is local to the date tile, NOT the whole month/day/year row.
+ * Trigger the drawing from a normal HTML span rather than observing the SVG
+ * circle itself (which proved unreliable after replay / on some browsers).
+ * A subtle static guide circle ensures that 14 remains circled even before
+ * the animation starts or if the user requests reduced motion.
+ */
+function WeddingDayCircle() {
+  const dayRef = useRef<HTMLSpanElement>(null);
+  const inView = useInView(dayRef, { once: true, amount: .2, margin: '0px 0px -5% 0px' });
+  const reduced = useReducedMotion();
+  const day = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh', day: 'numeric',
+  }).format(new Date(wedding.date));
+  return <span ref={dayRef} className="calendar-day-wrap">
+    <svg className="calendar-ribbon-ring" viewBox="0 0 88 88" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <circle className="calendar-ribbon-guide" cx="44" cy="44" r="32" />
+      <motion.circle className="calendar-ribbon-animated" cx="44" cy="44" r="32"
+        initial={{ pathLength: reduced ? 1 : 0 }}
+        animate={{ pathLength: inView || reduced ? 1 : 0 }}
+        transition={{ duration: reduced ? 0 : 1.2, ease: [0.22, 1, 0.36, 1] }} />
+    </svg>
+    <strong>{day}</strong>
+  </span>;
+}
 function EventsSection() {
   const name = `${wedding.couple.groom} & ${wedding.couple.bride}`;
   return <section id="details" className="events-section section-pad"><div className="events-texture"/><Floral position="left"/><div className="container events-container"><SectionHeading kicker="THE BIG DAY" title="Ngày mình chung đôi" caption="Sẽ thật tuyệt nếu có bạn ở đó, cùng chúng mình giữ lại một ngày khó quên."/>
-    <Countdown/><div className="calendar-ornament"><span className="calendar-month">{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',month:'long'}).format(new Date(wedding.date)).toUpperCase()}</span><span className="calendar-day-wrap"><motion.svg className="calendar-ribbon-ring" viewBox="0 0 88 88" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><motion.circle cx="44" cy="44" r="33" fill="none" stroke="#a35f69" strokeWidth="2.3" strokeLinecap="round" initial={{pathLength:0,rotate:-90}} whileInView={{pathLength:1,rotate:-90}} viewport={{once:true,amount:.9}} transition={{duration:1.45,ease}} style={{transformOrigin:'center'}}/></motion.svg><strong>{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',day:'numeric'}).format(new Date(wedding.date))}</strong></span><span className="calendar-weekday">{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',weekday:'long'}).format(new Date(wedding.date)).toUpperCase()}</span></div>
+    <Countdown/><div className="calendar-ornament"><span className="calendar-month">{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',month:'long'}).format(new Date(wedding.date)).toUpperCase()}</span><WeddingDayCircle /><span className="calendar-weekday">{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',weekday:'long'}).format(new Date(wedding.date)).toUpperCase()}</span></div>
     <div className="event-cards">{wedding.events.map((event,i)=><motion.article key={event.id} className="event-card" initial={{opacity:0,x:i===0?-125:125,rotate:i===0?-2.5:2.5,scale:.96}} whileInView={{opacity:1,x:0,rotate:0,scale:1}} viewport={{once:true,amount:.25}} transition={{type:'spring',stiffness:100,damping:20,mass:.85,delay:0}}><motion.span className="event-corner-seal" aria-hidden="true" initial={{opacity:0,scale:1.7,rotate:45}} whileInView={{opacity:1,scale:1,rotate:0}} viewport={{once:true}} transition={{duration:.65,delay:.56,ease}}>✦</motion.span><div className="event-symbol">{i===0?'✦':'♡'}</div><span className="eyebrow">{i===0 ? 'THE CEREMONY' : 'THE CELEBRATION'}</span><h3>{event.label}</h3><div className="event-detail"><CalendarDays size={18}/><span>{event.time}</span></div><div className="event-detail"><MapPin size={18}/><span><b>{event.venue}</b><small>{event.address}</small></span></div>{event.mapUrl ? <a href={event.mapUrl} target="_blank" rel="noreferrer" className="button button-outline">Xem chỉ đường <ArrowUpRight size={16}/></a> : <span className="event-location-pending">Địa điểm sẽ được cập nhật</span>}</motion.article>)}</div>
     <a className="calendar-add" href={buildCalendarUrl(name,wedding.date)} target="_blank" rel="noreferrer"><CalendarDays size={17}/> Thêm ngày cưới vào lịch của bạn <ArrowUpRight size={15}/></a>
   </div></section>;
@@ -334,7 +359,6 @@ export default function App() {
   const [playing,setPlaying]=useState(false);
   const [lightbox,setLightbox]=useState<number|null>(null);
   const [videoOpen,setVideoOpen]=useState(false);
-  const videoEmbedUrl: string = wedding.videoEmbedUrl;
   const audioRef=useRef<HTMLAudioElement>(null);
   useEffect(()=>{if(!opened){window.scrollTo({top:0,behavior:'auto'});document.body.style.overflow='hidden';return()=>{document.body.style.overflow='';};}},[opened]);
   const enter=()=>{setHeroRevealed(true);setOpened(true);};
@@ -373,7 +397,7 @@ export default function App() {
     <Footer onReplay={replayStory}/>
     {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>{lightbox!==null && <Lightbox index={lightbox} setIndex={setLightbox} onClose={()=>setLightbox(null)}/>}</AnimatePresence>
-    <AnimatePresence>{videoOpen && videoEmbedUrl && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${videoEmbedUrl}${videoEmbedUrl.includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
+    <AnimatePresence>{videoOpen && wedding.videoEmbedUrl && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${wedding.videoEmbedUrl.includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>
     <div className="sr-only">Các mục: {SECTION_IDS.join(', ')}</div>
   </>;
 }

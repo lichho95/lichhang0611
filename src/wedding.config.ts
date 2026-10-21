@@ -28,6 +28,8 @@ export const wedding = {
   // Đường dẫn video YouTube EMBED dạng https://www.youtube-nocookie.com/embed/VIDEO_ID — để '' nếu không dùng.
   videoEmbedUrl: '',
   image: {
+    // LƯU Ý: Ảnh DEMO hiện có được cắt từ mockup và không đủ nét để dùng chính thức.
+    // Thay bằng ảnh gốc sắc nét trước khi gửi thiệp; CSS không còn cố tình làm mờ ảnh.
     // ẢNH HERO: chân dung 1200×1600 px (3:4) hoặc lớn hơn, ưu tiên WebP < 400 KB.
     hero: '/images/hero-preview.webp',
     // ẢNH CẶP ĐÔI: dọc 1000×1400 px (5:7), WebP < 350 KB.
