@@ -3881,3 +3881,196 @@ a.footer-replay:hover { color: #fff0e8; text-decoration: underline; }
   }
 }
 
+
+/* V9 — hai phong bì chọn thiệp; dùng chung nền, màu và chất liệu V8.3 */
+.opening-chooser-screen { display: flex; align-items: center; justify-content: center; padding: 22px; }
+.opening-chooser-content { position: relative; z-index: 2; width: min(760px, 100%); text-align: center; margin-inline: auto; color: #743747; padding: 16px 8px; }
+.opening-chooser-content .opening-monogram { margin-top: 12px; }
+.opening-chooser-title { font-family: var(--script); font-style: normal; font-weight: 400; font-size: clamp(3.1rem,8vw,6.2rem); line-height: 1.35; margin: 2px auto 6px; letter-spacing: -.025em; padding: 0 .15em .15em; }
+.opening-chooser-caption { font-size: clamp(.85rem,2.7vw,1rem); color: #9f7775; margin: 0 0 26px; line-height: 1.6; }
+.opening-envelope-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: clamp(12px,4vw,36px); max-width: 610px; margin-inline: auto; }
+.opening-envelope-choice { border: 1px solid #e1c8be; border-radius: 18px; padding: clamp(12px,3vw,26px) 8px 19px; cursor: pointer; background: rgba(255,250,242,.88); box-shadow: 0 15px 38px rgba(90,41,44,.09); color: #803f4b; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-width: 0; position: relative; -webkit-tap-highlight-color: transparent; }
+.opening-envelope-choice:hover, .opening-envelope-choice:focus-visible { outline: none; border-color: #ad7780; box-shadow: 0 18px 44px rgba(90,41,44,.16); }
+.opening-choice-envelope { width: min(100%,220px); aspect-ratio: 1.35; position: relative; display: block; margin: 2px auto 17px; filter: drop-shadow(0 12px 10px rgba(103,66,55,.12)); }
+.opening-choice-envelope::before { content:''; position:absolute; inset:19% 7% 0; border-radius: 3px; background: linear-gradient(150deg,#fff8ee,#e7d3c6); border:1px solid #c6a99c; }
+.opening-choice-paper { position:absolute; z-index:1; inset: 4% 22% 29%; background:#fff9f0; border:1px solid #e9d3c6; border-radius: 3px; transform:rotate(-2deg); box-shadow:0 2px 8px #8e6c5940; }
+.opening-choice-flap { position:absolute; z-index:2; inset:19% 7% 0; clip-path:polygon(0 0,50% 66%,100% 0,100% 100%,0 100%); background:linear-gradient(170deg,#f3e2d3,#dfc3b7); border-radius:3px; }
+.opening-choice-seal { position:absolute; z-index:3; left:50%; top:56%; transform:translate(-50%,-50%); height:clamp(26px,5vw,39px); width:clamp(26px,5vw,39px); border-radius:50%; display:grid; place-items:center; background:#783847; color:#f7e8d5; box-shadow:0 2px 5px #722b3970; font-size:17px; border:2px solid #ac6a74; }
+.opening-choice-label { letter-spacing: .14em; font-weight: 600; font-size: clamp(.69rem,2.1vw,.9rem); }
+.opening-choice-sub { font-family: Georgia,serif; font-size: clamp(.71rem,2vw,.85rem); color:#a07878; }
+.opening-chooser-hint { margin-top:26px; color:#a47f78; font-size:.75rem; letter-spacing:.02em; }
+.desktop-side-picker { display:flex; flex-direction:column; gap:2px; color:#8d6269; font-size:10px; white-space:nowrap; text-align:center; }
+.desktop-side-picker select { cursor:pointer; background:transparent; border:1px solid #d8b7b7; border-radius:14px; padding:4px 18px 4px 8px; color:#793744; font-size:12px; max-width:112px; }
+.mobile-side-switch { padding:14px 10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; border-top:1px solid rgba(125,67,77,.15); }
+.mobile-side-switch span { font-size:12px; color:#90656b; }
+.mobile-side-switch button { font-size:12px; font-weight:600; color:#7b3547; border-bottom:1px solid #a06d77; padding:4px 0; }
+@media(max-width:920px){ .desktop-side-picker { display:none; } }
+@media(max-width:380px){ .opening-chooser-screen { padding:12px; } .opening-envelope-options{gap:10px} .opening-envelope-choice{padding:10px 5px 15px} .opening-chooser-caption{margin-bottom:17px} .opening-chooser-hint{margin-top:18px} }
+@media(prefers-reduced-motion:reduce){ .opening-envelope-choice{transition:none!important} }
+
+.opening-chooser-content { max-height: 94dvh; overflow-y: auto; scrollbar-width: none; }
+.opening-chooser-content::-webkit-scrollbar { display:none; }
+@media (min-width:921px) and (max-width:1180px) { .header{padding-inline:3%;gap:12px} .desktop-nav{gap:16px} }
+@media (max-width:920px) {
+  .desktop-nav,.nav-rsvp,.desktop-side-picker{display:none}
+  .menu-toggle{display:block}
+  .mobile-nav{display:flex;position:absolute;top:70px;left:0;right:0;background:#fcf7effa;backdrop-filter:blur(12px);box-shadow:0 14px 24px #62433626;padding:15px 24px 24px;flex-direction:column}
+  .mobile-nav a{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.08em;color:var(--wine);padding:14px;border-bottom:1px solid #e7d6c8}
+}
+@media(max-width:680px){.mobile-nav{top:65px}}
+.mobile-nav .mobile-side-switch button { width:auto; flex:0 0 auto; margin:0; border:0; border-bottom:1px solid #a06d77; border-radius:0; padding:4px 0; font-size:12px; letter-spacing:0; font-weight:600; }
+
+/* V9.1 — fixed dual-envelope choreography + visible mobile side toggle */
+.opening-chooser-stage {
+  position: absolute; inset: 0; z-index: 8;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px 22px;
+}
+.opening-chooser-stage .opening-chooser-content { width: min(760px,100%); }
+.opening-has-chooser .opening-content { z-index: 5; }
+.opening-envelope-choice:disabled { cursor: default; opacity: 1; }
+/* The choice is a preview of the same envelope. Seal/flap reveal happens in
+   the large envelope immediately after the focus/cross-fade handoff. */
+.opening-chooser-stage .opening-envelope-options { overflow: visible; }
+.opening-chooser-stage .opening-envelope-choice { transform-origin: center center; will-change: transform,opacity; }
+.mobile-side-chip { display: none; }
+@media (max-width:920px) {
+  .mobile-side-chip {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    margin-left: auto; margin-right: 2px; flex-shrink: 0;
+    border: 1px solid #cfaeae; border-radius: 999px;
+    background: rgba(255,250,243,.91); color: #773a48;
+    padding: 8px 11px; font: 600 11px/1.1 'DM Sans', sans-serif;
+    letter-spacing: .01em; white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(95,45,55,.07);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-side-chip svg { flex: 0 0 auto; }
+  .header { gap: 8px; }
+  .opening-chooser-stage { padding: 12px; }
+}
+@media (max-width:380px) {
+  .mobile-side-chip {font-size: 10px; padding: 7px 8px;}
+  .opening-chooser-stage .opening-chooser-content {padding-inline: 2px;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-chooser-stage .opening-envelope-choice { will-change: auto; }
+}
+/* When the chosen envelope moves to centre, don't clip its spring overshoot. */
+.opening-phase-focus .opening-chooser-content,
+.opening-phase-handoff .opening-chooser-content { overflow: visible; }
+
+
+/* =====================================================================
+   V9.2 — Việt hóa typography trên nền thiết kế The Living Ribbon.
+   Playfair Display có dấu tiếng Việt tốt hơn các nét chữ kiểu Great Vibes.
+   Giữ nguyên animation/DOM; chỉ bổ sung khoảng thở cho câu dài và dấu.
+   ===================================================================== */
+.opening-copy .invitation-script,
+.opening-chooser-title,
+.envelope-note-script {
+  font-family:var(--serif);
+  font-style:italic;
+  font-weight:400;
+  letter-spacing:-.035em;
+  text-wrap:balance;
+  overflow:visible;
+}
+.opening-copy .invitation-script {
+  font-size:clamp(29px,6.1vw,43px);
+  line-height:1.36;
+  white-space:normal;
+  padding:.12em .12em .15em;
+  margin:8px auto 4px;
+}
+.envelope-note-script {
+  width:100%;
+  max-width:100%;
+  font-size:clamp(16px,2.7vw,22px);
+  line-height:1.3;
+  padding:0 5px;
+  white-space:normal;
+  text-align:center;
+}
+.opening-chooser-title {
+  max-width:660px;
+  font-size:clamp(31px,5.3vw,60px);
+  line-height:1.3;
+  white-space:normal;
+  padding:.08em .14em .18em;
+  overflow-wrap:break-word;
+}
+.hero-subtitle {
+  font-family:var(--serif);
+  font-size:clamp(12px,1.45vw,16px);
+  line-height:1.5;
+  letter-spacing:.07em;
+  text-transform:none;
+}
+.hero-vertical {letter-spacing:.15em;}
+.hero-scroll span {letter-spacing:.13em;}
+.wishes-side-note {line-height:1.65;letter-spacing:.09em;}
+.last-letter .script-signature {
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:clamp(23px,3.2vw,34px);
+  line-height:1.5;
+  text-wrap:balance;
+}
+.gallery-tile .gallery-print-caption {
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:clamp(9px,1vw,13px);
+  white-space:normal;
+  line-height:1.15;
+  height:auto;
+  bottom:7px;
+  padding-inline:2px;
+}
+.gallery-scrapbook-decor,
+.gallery-scrapbook-note {font-family:var(--serif);font-style:italic;}
+.memory-postmark,.memory-promise-seal {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  line-height:1.25;
+  padding:6px;
+  letter-spacing:.025em;
+}
+.memory-postmark {font-size:clamp(6px,.55vw,8px);}
+.memory-promise-seal {font-size:clamp(6px,.55vw,8px);}
+.footer-made {letter-spacing:.12em;text-align:center;}
+/* Chữ THÁNG và thứ được tính theo ngày của từng thiệp; tránh ép một dòng quá hẹp. */
+.formal-invitation .calendar-ornament .calendar-month,
+.formal-invitation .calendar-ornament .calendar-weekday {
+  white-space:normal;
+  overflow-wrap:normal;
+  line-height:1.4;
+  text-wrap:balance;
+}
+@media (max-width:680px) {
+  .opening-copy .invitation-script {
+    font-size:clamp(27px,7.7vw,40px);
+    white-space:normal;
+    letter-spacing:-.04em;
+    line-height:1.36;
+    padding:.12em .12em .16em;
+  }
+  .opening-chooser-title {font-size:clamp(26px,7.2vw,37px);line-height:1.3;}
+  .envelope-note-script {font-size:clamp(15px,4.7vw,20px);white-space:normal;}
+  .hero-subtitle {font-size:clamp(11px,3.1vw,14px);letter-spacing:.025em;max-width:94%;margin-inline:auto;}
+  .hero-vertical {display:none;}
+  .formal-invitation .calendar-ornament .calendar-month,
+  .formal-invitation .calendar-ornament .calendar-weekday {font-size:clamp(9px,2.7vw,11px);letter-spacing:0;}
+  .fragments-overline {font-size:clamp(7px,2vw,9px);letter-spacing:.06em;}
+  .memory-postmark {font-size:7px;width:69px;height:69px;}
+  .memory-promise-seal {font-size:7px;width:64px;height:64px;}
+  .gallery-stack-front span {letter-spacing:.06em;font-size:clamp(9px,2.4vw,12px);text-align:center;padding-inline:4px;}
+  .last-letter .script-signature {font-size:clamp(20px,6vw,29px);}
+}
+@media (max-width:360px) {
+  .formal-invitation .calendar-ornament .calendar-weekday {flex-basis:104px;}
+  .formal-invitation .calendar-ornament .calendar-month {flex-basis:66px;}
+}

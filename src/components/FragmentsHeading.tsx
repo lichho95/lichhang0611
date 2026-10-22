@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react';
 
-const letters = Array.from('FRAGMENTS OF FOREVER');
+const galleryKicker = 'KHOẢNH KHẮC CÒN MÃI';
+const letters = Array.from(galleryKicker);
 const ease = [0.22, 1, 0.36, 1] as const;
 
 /** Editorial film-title choreography: scattered type resolves into a single headline. */
@@ -8,7 +9,7 @@ export function FragmentsHeading() {
   const reduced = useReducedMotion();
   return (
     <div className="section-heading fragments-heading">
-      <motion.div className="fragments-overline" aria-label="FRAGMENTS OF FOREVER"
+      <motion.div className="fragments-overline" aria-label={galleryKicker}
         initial="hidden" whileInView="show" viewport={{ once: true, amount: .6 }}
         variants={{ hidden: {}, show: { transition: { staggerChildren: reduced ? 0 : .04, delayChildren: .13 } } }}
       >
@@ -39,7 +40,7 @@ export function FragmentsHeading() {
         Một album nhỏ lưu giữ những ánh nhìn, nụ cười và những ngày thật đẹp bên nhau.
       </motion.p>
       <span className="fragments-frame-mark fragments-frame-mark-left" aria-hidden="true">01 — 06</span>
-      <span className="fragments-frame-mark fragments-frame-mark-right" aria-hidden="true">LOVE, ON FILM</span>
+      <span className="fragments-frame-mark fragments-frame-mark-right" aria-hidden="true">THƯƠNG TRONG TỪNG KHUNG HÌNH</span>
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function JourneyTransition({ number, title, motif = 'loop' }: { number: s
           {motif === 'loop' && <><path d="M8 39 C18 14 29 14 32 34 C35 54 48 52 56 27"/><circle cx="32" cy="34" r="3"/></>}
         </svg>
       </div>
-      <span>✧ &nbsp; CHAPTER {number} &nbsp; ✧</span>
+      <span>✧ &nbsp; CHƯƠNG {number} &nbsp; ✧</span>
       <strong>{title}</strong>
     </motion.div>
   </div>;

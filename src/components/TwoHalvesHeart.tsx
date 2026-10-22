@@ -72,7 +72,7 @@ export function TwoHalvesHeart() {
           initial={reduced?false:{pathLength:0}} animate={{pathLength:playScene ? 1 : 0}}
           transition={{duration:reduced?0:1.35,delay:reduced?0:2.0,ease}} />
       </svg>
-      <motion.p className="hearts-ceremony-caption" initial={reduced?false:{opacity:0,y:10}} animate={playScene ? {opacity:1,y:0} : {opacity:0,y:10}} transition={{delay:reduced?0:2.3,duration:.7}}>TWO HALVES · ONE HEART</motion.p>
+      <motion.p className="hearts-ceremony-caption" initial={reduced?false:{opacity:0,y:10}} animate={playScene ? {opacity:1,y:0} : {opacity:0,y:10}} transition={{delay:reduced?0:2.3,duration:.7}}>HAI NỬA · MỘT TRÁI TIM</motion.p>
     </div>
   );
 }

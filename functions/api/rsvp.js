@@ -7,6 +7,8 @@ export async function onRequestPost({ request, env }) {
   if (clean(payload.website, 100)) return json({ ok: true }); // bot honeypot
   const guest_name = clean(payload.guest_name, 70);
   const event_id = clean(payload.event_id, 60);
+  const side = clean(payload.side, 10);
+  if (!['groom', 'bride'].includes(side)) return json({ ok: false, error: 'Vui lòng chọn thiệp nhà trai hoặc nhà gái.' }, 400);
   const note = clean(payload.note, 500);
   const attending = payload.attending === true;
   const guest_count = attending ? Number(payload.guest_count) : 0;
@@ -15,8 +17,8 @@ export async function onRequestPost({ request, env }) {
   }
   if (!(await verifyChallenge(request, env, payload))) return json({ ok: false, error: 'Vui lòng hoàn tất xác minh chống spam.' }, 403);
   try {
-    await env.DB.prepare('INSERT INTO rsvps (guest_name, attending, guest_count, event_id, note) VALUES (?, ?, ?, ?, ?)')
-      .bind(guest_name, attending ? 1 : 0, guest_count, event_id, note).run();
+    await env.DB.prepare('INSERT INTO rsvps (guest_name, attending, guest_count, event_id, note, side) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(guest_name, attending ? 1 : 0, guest_count, event_id, note, side).run();
     return json({ ok: true }, 201);
   } catch { return json({ ok: false, error: 'Không thể lưu xác nhận. Vui lòng thử lại.' }, 500); }
 }

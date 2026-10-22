@@ -14,13 +14,11 @@ export const wedding = {
     groomParents: ['Ông Hồ Phước Lành', 'Bà Mai Thị Hằng'],
     brideParents: ['Ông Cao Chánh Thành', 'Bà Lê Thị Nga'],
   },
-  date: '2027-02-14T17:00:00+07:00',
-  dateText: '14 . 02 . 2027',
   inviteLabel: 'Trân trọng kính mời',
   greeting: 'Một lời mời nhỏ, dành cho một ngày thật đặc biệt.',
   intro: 'Giữa muôn vàn cuộc gặp gỡ, chúng mình đã tìm thấy nhau. Và hôm nay, hạnh phúc ấy sẽ trọn vẹn hơn khi có bạn chung vui.',
-  quote: 'There is only one happiness in this life, to love and be loved.',
-  thanks: 'Cảm ơn vì đã là một phần trong câu chuyện của chúng mình.',
+  quote: 'Hạnh phúc là khi ta yêu thương và được yêu thương.',
+  thanks: 'Cảm ơn bạn đã dành thời gian ghé thăm câu chuyện của chúng mình. Sự hiện diện và những lời chúc tốt đẹp của bạn sẽ luôn là một phần ký ức đáng trân trọng trong ngày vui này.',
   // MP3 128–192 kbps, 1–3 phút, dung lượng lý tưởng < 4 MB. Để '' sẽ ẩn nút nhạc.
   musicUrl: '/music/le-duong.mp3',
   // Cloudflare Turnstile public site key (KHÔNG phải secret); để trống khi chưa bật.
@@ -61,24 +59,38 @@ export const wedding = {
       image: '/images/story-3.webp',
     },
   ],
-  events: [
-    {
-      id: 'ceremony',
-      label: 'Lễ thành hôn',
-      time: '16:30 · Chủ nhật, 14/02/2027',
-      venue: 'Địa điểm lễ thành hôn',
-      address: 'Thông tin đang được cập nhật',
-      mapUrl: '', // Dán link Google Maps thật (https://maps.google.com/...)
+  /**
+   * HAI PHIÊN BẢN THIỆP — nội dung chung (ảnh, nhạc, story, gallery, hiệu ứng)
+   * giữ ở các trường phía trên. Chỉ ngày, lời mời và các sự kiện khác nhau.
+   * LINK RIÊNG: ?side=groom (nhà trai), ?side=bride (nhà gái).
+   * Các ngày nhà gái hiện sao chép ngày DEMO nhà trai để website có thể xem thử;
+   * BẮT BUỘC thay bằng lịch thực tế trước khi phát thiệp.
+   */
+  invitations: {
+    groom: {
+      label: 'Nhà trai',
+      ceremonyName: 'Lễ thành hôn',
+      formalText: 'Trân trọng báo tin lễ thành hôn của hai con',
+      date: '2026-11-07T09:00:00+07:00',
+      dateText: '07 . 11 . 2026',
+      events: [
+        { id: 'ceremony', label: 'Lễ thành hôn', time: '09:30 · Thứ bảy, 07/11/2026', venue: 'Nhà riêng chú rể', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: '' },
+        { id: 'reception', label: 'Tiệc cưới nhà trai', time: '10:30 · Thứ bảy, 07/11/2026', venue: 'Nhà văn hóa TDP Phong Hải 1 (Hải Thế cũ)', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: 'https://maps.app.goo.gl/yJtvKyAqCQx6ijii6' },
+      ],
     },
-    {
-      id: 'reception',
-      label: 'Tiệc cưới',
-      time: '17:00 · Chủ nhật, 14/02/2027',
-      venue: 'Địa điểm tiệc cưới',
-      address: 'Thông tin đang được cập nhật',
-      mapUrl: '',
+    bride: {
+      label: 'Nhà gái',
+      ceremonyName: 'Lễ vu quy',
+      formalText: 'Trân trọng báo tin lễ vu quy của hai con',
+      // THAY NGÀY THỰC TẾ của nhà gái. Giá trị dưới đây chỉ là DEMO.
+      date: '2026-11-06T08:30:00+07:00',
+      dateText: '06 . 11 . 2026',
+      events: [
+        { id: 'ceremony', label: 'Lễ vu quy', time: '08:30 · Thứ sáu, 06/11/2026', venue: 'Nhà riêng cô dâu', address: 'TDP Điền Hải 3, Phường Phong Quảng, TP Huế', mapUrl: '' },
+        { id: 'reception', label: 'Tiệc cưới nhà gái', time: '10:00 · Thứ sáu, 06/11/2026', venue: 'Nhà văn hóa TDP Điền Hải 3 (Thế Chí Đông 6 cũ)', address: 'TDP Điền Hải 3, Phường Phong Quảng, TP Huế', mapUrl: 'https://maps.app.goo.gl/ixt1C8TXQGFbKSYN9' },
+      ],
     },
-  ],
+  },
   // ẢNH GALLERY: 900×1200 px (3:4) hoặc 1200×900 px (4:3), WebP ~100–300 KB/tấm.
   // Có thể thêm/bớt ảnh; tỷ lệ gốc sẽ được giao diện sắp xếp linh hoạt.
   gallery: [

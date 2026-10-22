@@ -47,14 +47,14 @@ export async function onRequestGet({ request, env }) {
     `).first();
 
     const wishes = await env.DB.prepare(`
-      SELECT id, guest_name, message, status, created_at 
+      SELECT id, guest_name, message, status, side, created_at 
       FROM wishes 
       ORDER BY created_at DESC, id DESC 
       LIMIT 500
     `).all();
 
     const rsvps = await env.DB.prepare(`
-      SELECT id, guest_name, attending, guest_count, event_id, note, created_at 
+      SELECT id, guest_name, attending, guest_count, event_id, side, note, created_at 
       FROM rsvps 
       ORDER BY created_at DESC, id DESC 
       LIMIT 500
@@ -116,7 +116,10 @@ export async function onRequestPost({ request, env }) {
     }
 
     if (action === 'approve_all_wishes') {
-      await env.DB.prepare("UPDATE wishes SET status = 'approved' WHERE status = 'pending'").run();
+      const side = clean(payload.side || 'all', 10);
+      if (!['all','groom','bride','legacy'].includes(side)) return json({ ok: false, error: 'Bộ lọc bên mời không hợp lệ.' }, 400);
+      if (side === 'all') await env.DB.prepare("UPDATE wishes SET status = 'approved' WHERE status = 'pending'").run();
+      else await env.DB.prepare("UPDATE wishes SET status = 'approved' WHERE status = 'pending' AND side = ?").bind(side).run();
       return json({ ok: true });
     }
 

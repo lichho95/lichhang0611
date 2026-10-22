@@ -62,7 +62,7 @@ export function MemoryCard({ chapter, index, total }: { chapter: Memory; index: 
               <motion.span className="memory-postmark" aria-hidden="true"
                 initial={reduceMotion ? false : { scale: 2.1, rotate: -32, opacity: 0 }}
                 animate={active ? { scale: 1, rotate: -13, opacity: 1 } : undefined}
-                transition={{ type: 'spring', stiffness: 160, damping: 14, delay: photoDelay + 1.13 }}>FIRST HELLO <span>♡</span></motion.span>
+                transition={{ type: 'spring', stiffness: 160, damping: 14, delay: photoDelay + 1.13 }}>NGÀY ĐẦU GẶP GỠ <span>♡</span></motion.span>
             </>
           )}
           {index === 1 && (
@@ -92,7 +92,7 @@ export function MemoryCard({ chapter, index, total }: { chapter: Memory; index: 
               <motion.span className="memory-promise-seal" aria-hidden="true"
                 initial={reduceMotion ? false : { opacity: 0, scale: 1.65, rotate: -35 }}
                 animate={active ? { opacity: 1, scale: 1, rotate: 10 } : undefined}
-                transition={{ type: 'spring', stiffness: 170, damping: 15, delay: photoDelay + 1.44 }}>FOREVER</motion.span>
+                transition={{ type: 'spring', stiffness: 170, damping: 15, delay: photoDelay + 1.44 }}>MÃI BÊN NHAU</motion.span>
             </>
           )}
           <span className="story-photo-number">0{index + 1} / 0{total}</span>

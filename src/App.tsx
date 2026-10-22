@@ -14,10 +14,31 @@ import { TwoHalvesHeart } from './components/TwoHalvesHeart';
 import { useGentleAutoScroll } from './components/useGentleAutoScroll';
 import { buildCalendarUrl, clampIndex, countdownParts, getGuestName, withLeadingZero } from './lib/utils';
 import { loadWishes, sendRSVP, sendWish, type Wish } from './lib/api';
+import { getInitialInvitationSide, setInvitationUrlSide, sideLabels, type InvitationSide } from './lib/invitation-side';
 import { Toast, type ToastData } from './components/Toast';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const SECTION_IDS = ['home', 'details', 'story', 'gallery', 'wishes', 'gift'] as const;
+// Tháng bằng chữ, thống nhất cách ghi trang trọng trên thiệp cưới Việt Nam.
+const VIETNAMESE_MONTH_NAMES = ['MỘT', 'HAI', 'BA', 'TƯ', 'NĂM', 'SÁU', 'BẢY', 'TÁM', 'CHÍN', 'MƯỜI', 'MƯỜI MỘT', 'MƯỜI HAI'] as const;
+const weddingDateParts = (date: string) => new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit'
+}).formatToParts(new Date(date));
+function getWeddingDatePart(date: string, part: 'day' | 'month' | 'year') {
+  return weddingDateParts(date).find(item => item.type === part)?.value ?? '';
+}
+function formatWeddingMonth(date: string) {
+  const monthIndex = Number(getWeddingDatePart(date, 'month')) - 1;
+  return `THÁNG ${VIETNAMESE_MONTH_NAMES[monthIndex] ?? '—'}`;
+}
+function formatWeddingWeekday(date: string) {
+  return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'long' })
+    .format(new Date(date)).toLocaleUpperCase('vi-VN');
+}
+function formatWeddingShortDate(date: string) {
+  return [getWeddingDatePart(date, 'day'), getWeddingDatePart(date, 'month'), getWeddingDatePart(date, 'year')].join('.');
+}
+
 const navItems = [
   { id: 'home', label: 'Trang đầu' },
   { id: 'details', label: 'Thiệp mời' },
@@ -52,8 +73,8 @@ function Floral({ position = 'right' }: { position?: 'left' | 'right' }) {
 function WaxSeal({ large = false }: { large?: boolean }) {
   return <span className={`wax-seal ${large ? 'wax-seal-large' : ''}`} aria-hidden="true"><span>{wedding.couple.initials.replace('&', '·')}</span></span>;
 }
-function EnvelopeArt({ opened = false }: { opened?: boolean }) {
-  return <div className={`envelope-art ${opened ? 'envelope-art-open' : ''}`} aria-hidden="true"><div className="envelope-note"><span className="envelope-note-small">A CELEBRATION OF LOVE</span><span className="envelope-note-script">You're Invited</span><span className="envelope-note-small">{wedding.dateText}</span></div><div className="envelope-back"/><div className="envelope-flap"/><div className="envelope-front"/><div className="envelope-seal"><WaxSeal large /></div></div>;
+function EnvelopeArt({ opened = false, dateText }: { opened?: boolean; dateText: string }) {
+  return <div className={`envelope-art ${opened ? 'envelope-art-open' : ''}`} aria-hidden="true"><div className="envelope-note"><span className="envelope-note-small">Ngày vui của chúng mình</span><span className="envelope-note-script">Trân trọng kính mời</span><span className="envelope-note-small">{dateText}</span></div><div className="envelope-back"/><div className="envelope-flap"/><div className="envelope-front"/><div className="envelope-seal"><WaxSeal large /></div></div>;
 }
 /**
  * Opening choreography:
@@ -63,44 +84,138 @@ function EnvelopeArt({ opened = false }: { opened?: boolean }) {
  * 2850ms   → reveal the underlying hero and start its entrance
  * Motion reduction → enter immediately. Timers are cleared on unmount.
  */
-function Opening({ onEnter, onReveal, onBegin, guestName }: { onEnter: () => void; onReveal: () => void; onBegin: () => void; guestName: string }) {
-  const [phase, setPhase] = useState<'sealed' | 'unseal' | 'unfold' | 'journey'>('sealed');
+function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { onEnter: () => void; onReveal: () => void; onBegin: () => void; onSelect: (side: InvitationSide) => void; side: InvitationSide | null; guestName: string }) {
+  // Freeze the original entry mode. Updating `side` must NOT unmount the two-envelope stage.
+  // V9 jumped immediately to the single envelope before its selection choreography could run.
+  const [startsWithChooser] = useState(() => side === null);
+  const [phase, setPhase] = useState<'sealed' | 'focus' | 'handoff' | 'unseal' | 'unfold' | 'journey'>('sealed');
+  const [chosen, setChosen] = useState<InvitationSide | null>(null);
+  const [focusX, setFocusX] = useState(0);
+  const [focusY, setFocusY] = useState(-12);
+  const [focusScale, setFocusScale] = useState(1.13);
+  const choiceRefs = useRef<Record<InvitationSide, HTMLButtonElement | null>>({ groom: null, bride: null });
   const reduced = useReducedMotion();
   const timers = useRef<number[]>([]);
   useEffect(() => () => { timers.current.forEach(window.clearTimeout); }, []);
-  const begin = () => {
-    if (phase !== 'sealed') return;
-    // Play from the original user gesture — delayed play() would be blocked on Safari/iOS.
+  const schedule = (callback: () => void, delay: number) => {
+    timers.current.push(window.setTimeout(callback, delay));
+  };
+  const begin = (picked?: InvitationSide) => {
+    if (phase !== 'sealed' || (startsWithChooser && !picked)) return;
+    if (picked) {
+      const rect = choiceRefs.current[picked]?.getBoundingClientRect();
+      if (rect) {
+        // Measure the destination envelope even while it is visually hidden.
+        // This avoids jumping vertically during the card-to-envelope cross-fade.
+        const destination = document.querySelector<HTMLElement>('.opening-content .envelope-art')?.getBoundingClientRect();
+        setFocusX((destination ? destination.left + destination.width / 2 : window.innerWidth / 2) - (rect.left + rect.width / 2));
+        if (destination) {
+          setFocusY(destination.top + destination.height / 2 - (rect.top + rect.height / 2));
+          setFocusScale(Math.min(1.46, Math.max(1.07, destination.width / rect.width * .92)));
+        }
+      }
+      setChosen(picked);
+      onSelect(picked);
+    }
+    // User gesture: iOS Safari allows audio only when play is initiated from the real click.
     onBegin();
     if (reduced) { onReveal(); onEnter(); return; }
-    setPhase('unseal');
-    timers.current.push(window.setTimeout(() => setPhase('unfold'), 460));
-    timers.current.push(window.setTimeout(() => {setPhase('journey'); onReveal();}, 1250));
-    timers.current.push(window.setTimeout(onEnter, 2230));
+    if (startsWithChooser) {
+      // Both cards STAY mounted while the chosen card moves to the centre.
+      setPhase('focus');
+      schedule(() => setPhase('handoff'), 950);
+      // Cross-fade selected little envelope to the large, full-detail envelope.
+      schedule(() => setPhase('unseal'), 1430);
+      schedule(() => setPhase('unfold'), 1900);
+      schedule(() => { setPhase('journey'); onReveal(); }, 2660);
+      schedule(onEnter, 3670);
+    } else {
+      setPhase('unseal');
+      schedule(() => setPhase('unfold'), 460);
+      schedule(() => { setPhase('journey'); onReveal(); }, 1250);
+      schedule(onEnter, 2230);
+    }
   };
-  return <motion.div className={`opening-screen opening-phase-${phase}`} initial={{ opacity: 1 }} exit={{ opacity: 0, pointerEvents: 'none' }} transition={{ duration: .2 }}>
+  const isChoosing = startsWithChooser && ['sealed', 'focus', 'handoff'].includes(phase);
+  const mainVisible = !startsWithChooser || phase === 'handoff' || ['unseal', 'unfold', 'journey'].includes(phase);
+  const isOpening = ['unseal', 'unfold', 'journey'].includes(phase);
+  return <motion.div className={`opening-screen opening-phase-${phase} ${startsWithChooser ? 'opening-has-chooser' : ''}`}
+    initial={{ opacity: 1 }} exit={{ opacity: 0, pointerEvents: 'none' }} transition={{ duration: .24 }}>
     <div className="opening-background"/><Floral position="left"/><Floral position="right"/>
     <svg className="opening-silk-trail" viewBox="0 0 900 650" preserveAspectRatio="none" aria-hidden="true">
       <defs><linearGradient id="opening-silk-grad"><stop stopColor="#c98b8d"/><stop offset=".45" stopColor="#6f2d3c"/><stop offset="1" stopColor="#c98b8d"/></linearGradient></defs>
-      <motion.path d="M452 360 C400 301 305 438 192 310 S45 152 -30 262 M452 360 C561 271 637 459 740 343 S835 205 940 182" fill="none" stroke="url(#opening-silk-grad)" strokeWidth="5" strokeLinecap="round" initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: phase === 'sealed' ? 0 : 1, opacity: phase === 'sealed' ? 0 : 1 }} transition={{ pathLength: { duration: 1.3, ease: [.22,1,.36,1], delay: phase === 'unseal' ? .46 : 0 }, opacity: { duration: .3 } }} />
+      <motion.path d="M452 360 C400 301 305 438 192 310 S45 152 -30 262 M452 360 C561 271 637 459 740 343 S835 205 940 182" fill="none" stroke="url(#opening-silk-grad)" strokeWidth="5" strokeLinecap="round"
+        initial={{pathLength:0,opacity:0}} animate={{pathLength:phase==='journey'?1:0,opacity:phase==='journey'?1:0}}
+        transition={{pathLength:{duration:1.12,ease},opacity:{duration:.3}}} />
     </svg>
-    <motion.div className="opening-content" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8 }}>
-      <div className="eyebrow">TOGETHER WITH OUR FAMILIES</div>
+    <motion.div className="opening-content"
+      initial={startsWithChooser ? false : {opacity:0,y:24}}
+      animate={{opacity:mainVisible?1:0,y:mainVisible?0:16}}
+      transition={{duration: startsWithChooser ? .45 : .8, ease}}
+      style={{pointerEvents:mainVisible?'auto':'none'}} aria-hidden={!mainVisible}>
+      <div className="eyebrow">NIỀM VUI CỦA HAI GIA ĐÌNH</div>
       <div className="opening-monogram">{wedding.couple.initials}</div>
-      <EnvelopeArt opened={phase !== 'sealed'} />
+      <EnvelopeArt opened={isOpening} dateText={wedding.invitations[side || chosen || 'groom'].dateText} />
       <div className="opening-copy">
-        <p className="invitation-script">You're Invited</p>
+        <p className="invitation-script">Trân trọng kính mời</p>
         <p className="opening-text">{guestName ? `Thân mời ${guestName}` : wedding.greeting}</p>
-        <button className="button button-primary opening-button" onClick={begin} disabled={phase !== 'sealed'} aria-label="Chạm để mở phong bì và bắt đầu câu chuyện">
-          {phase === 'sealed' ? 'Mở thiệp cưới' : 'Chuyện mình bắt đầu...'} <ArrowRight size={16}/>
+        <button className="button button-primary opening-button" onClick={()=>begin()} disabled={phase!=='sealed'||startsWithChooser} tabIndex={startsWithChooser?-1:0}
+          aria-label="Chạm để mở phong bì và bắt đầu câu chuyện">
+          {phase==='sealed'?'Mở thiệp cưới':'Chuyện mình bắt đầu...'} <ArrowRight size={16}/>
         </button>
-        <p className="opening-hint">{phase === 'sealed' ? 'CHẠM ĐỂ BẮT ĐẦU CÂU CHUYỆN' : 'FOLLOW THE LIVING RIBBON'}</p>
+        <p className="opening-hint">{phase==='sealed'?'CHẠM ĐỂ BẮT ĐẦU CÂU CHUYỆN':'DẢI LỤA DẪN LỐI YÊU THƯƠNG'}</p>
       </div>
     </motion.div>
-    <span className="opening-side-note">A STORY WRITTEN IN LOVE · {wedding.dateText.slice(-4)}</span>
+    <AnimatePresence>
+      {isChoosing && <motion.div className="opening-chooser-stage" key="chooser"
+        initial={false} animate={{opacity:phase==='handoff'?0:1}}
+        exit={{opacity:0}} transition={{duration:.43,ease}} style={{pointerEvents:phase==='sealed'?'auto':'none'}}>
+        <div className="opening-chooser-content">
+          <motion.div className="opening-chooser-heading"
+            animate={{opacity:phase==='sealed'?1:0,y:phase==='sealed'?0:-18}}
+            transition={{duration:.38}}>
+            <div className="eyebrow">NIỀM VUI CỦA HAI GIA ĐÌNH</div>
+            <div className="opening-monogram">{wedding.couple.initials}</div>
+            <h1 className="opening-chooser-title">Có một lời mời dành cho bạn…</h1>
+            <p className="opening-chooser-caption">Một câu chuyện tình yêu · Hai lời mời trân quý</p>
+          </motion.div>
+          <div className="opening-envelope-options" role="group" aria-label="Chọn thiệp cưới nhà trai hoặc nhà gái">
+            {(['groom','bride'] as const).map((choice,index) => {
+              const focused = choice===chosen;
+              return <motion.button type="button" key={choice} ref={node=>{choiceRefs.current[choice]=node;}}
+                className={`opening-envelope-choice ${focused?'opening-envelope-selected':''}`}
+                initial={reduced?false:{opacity:0,x:choice==='groom'?-95:95,y:18,rotate:choice==='groom'?-7:7,scale:.9}}
+                animate={chosen ? (focused
+                  ? {opacity:1,x:focusX,y:focusY,rotate:0,scale:focusScale,zIndex:4}
+                  : {opacity:0,x:choice==='groom'?-82:82,y:25,rotate:choice==='groom'?-8:8,scale:.84,zIndex:0})
+                  : {opacity:1,x:0,y:0,rotate:0,scale:1,zIndex:1}}
+                whileHover={!chosen&&!reduced?{y:-7,rotate:choice==='groom'?-2:2}:undefined}
+                whileTap={!chosen&&!reduced?{scale:.97}:undefined}
+                transition={{type:'spring',stiffness:chosen?115:105,damping:chosen?20:16,delay:chosen?0:index*.16+.12}}
+                onClick={()=>begin(choice)} disabled={phase!=='sealed'}>
+                <span className="opening-choice-envelope" aria-hidden="true">
+                  <span className="opening-choice-paper"/>
+                  <span className="opening-choice-flap"/>
+                  <span className="opening-choice-seal">♥</span>
+                </span>
+                <span className="opening-choice-label">THIỆP {choice==='groom'?'NHÀ TRAI':'NHÀ GÁI'}</span>
+                <span className="opening-choice-sub">{wedding.invitations[choice].ceremonyName}</span>
+              </motion.button>;
+            })}
+          </div>
+          <motion.p className="opening-chooser-hint"
+            animate={{opacity:phase==='sealed'?1:0}}
+            transition={{duration:.25}}>
+            Chạm vào một phong bì để mở thiệp · Chỉ một lần chạm
+          </motion.p>
+        </div>
+      </motion.div>}
+    </AnimatePresence>
+    <span className="opening-side-note">MỘT CHUYỆN TÌNH ĐƯỢC VIẾT BẰNG YÊU THƯƠNG · {wedding.invitations[side || chosen || 'groom'].dateText.slice(-4)}</span>
   </motion.div>;
 }
-function Header({ opened, onRSVP }: { opened: boolean; onRSVP: () => void }) {
+
+function Header({ opened, onRSVP, side, onSwitchSide }: { opened: boolean; onRSVP: () => void; side: InvitationSide | null; onSwitchSide: (side: InvitationSide) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -112,9 +227,17 @@ function Header({ opened, onRSVP }: { opened: boolean; onRSVP: () => void }) {
   return <header className={`header ${scrolled ? 'header-scrolled' : ''}`}>
     <a className="nav-brand" href="#home" onClick={() => setMenuOpen(false)} aria-label="Về trang đầu">{wedding.couple.initials}</a>
     <nav className="desktop-nav" aria-label="Điều hướng chính">{navItems.map(item => <a key={item.id} href={`#${item.id}`}>{item.label}</a>)}</nav>
+    <div className="desktop-side-picker" aria-label="Đổi phiên bản thiệp"><span>Thiệp {side==='groom'?'nhà trai':'nhà gái'}</span><select value={side || 'groom'} onChange={e=>onSwitchSide(e.target.value as InvitationSide)} aria-label="Chọn thiệp nhà trai hoặc nhà gái"><option value="groom">Nhà trai</option><option value="bride">Nhà gái</option></select></div>
+    {/* Small, discoverable mobile control: switching is one tap, no hidden menu. */}
+    <motion.button type="button" className="mobile-side-chip" whileTap={{scale:.96}}
+      onClick={()=>{setMenuOpen(false);onSwitchSide(side==='groom'?'bride':'groom');}}
+      aria-label={`Đang xem thiệp ${side==='groom'?'nhà trai':'nhà gái'}. Chạm để đổi sang thiệp ${side==='groom'?'nhà gái':'nhà trai'}`}
+      title={`Đổi sang thiệp ${side==='groom'?'nhà gái':'nhà trai'}`}>
+      <span>Thiệp {side==='groom'?'nhà trai':'nhà gái'}</span><RotateCcw size={13} strokeWidth={1.7}/>
+    </motion.button>
     <button type="button" onClick={onRSVP} className="nav-rsvp">Xác nhận tham dự <ArrowUpRight size={14}/></button>
     <button className="menu-toggle" aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen(o => !o)}>{menuOpen ? <X size={23}/> : <Menu size={23}/>}</button>
-    <AnimatePresence>{menuOpen && <motion.nav className="mobile-nav" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} aria-label="Điều hướng trên điện thoại">{navItems.map(item => <a key={item.id} href={`#${item.id}`} onClick={() => setMenuOpen(false)}>{item.label}<ArrowUpRight size={15}/></a>)}<button type="button" onClick={() => {setMenuOpen(false);onRSVP();}}>Xác nhận tham dự <Heart size={15}/></button></motion.nav>}</AnimatePresence>
+    <AnimatePresence>{menuOpen && <motion.nav className="mobile-nav" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} aria-label="Điều hướng trên điện thoại">{navItems.map(item => <a key={item.id} href={`#${item.id}`} onClick={() => setMenuOpen(false)}>{item.label}<ArrowUpRight size={15}/></a>)}<div className="mobile-side-switch"><span>Đang xem: {side ? sideLabels[side] : 'Thiệp cưới'}</span><button type="button" onClick={()=>{setMenuOpen(false);onSwitchSide(side==='groom'?'bride':'groom');}}>Đổi sang {side==='groom'?'nhà gái':'nhà trai'}</button></div><button type="button" onClick={() => {setMenuOpen(false);onRSVP();}}>Xác nhận tham dự <Heart size={15}/></button></motion.nav>}</AnimatePresence>
   </header>;
 }
 function MusicControl({ playing, setPlaying, audioRef }: { playing: boolean; setPlaying: (value: boolean) => void; audioRef: React.RefObject<HTMLAudioElement | null> }) {
@@ -126,7 +249,8 @@ function MusicControl({ playing, setPlaying, audioRef }: { playing: boolean; set
   };
   return <button className={`music-control ${playing ? 'music-playing' : ''}`} onClick={toggle} aria-label={playing ? 'Tắt nhạc nền' : 'Bật nhạc nền'} title={playing ? 'Tắt nhạc' : 'Phát nhạc'}><Music2 size={18}/>{playing ? <Pause size={12}/> : <Play size={12}/>}</button>;
 }
-function Hero({ guestName, active }: { guestName: string; active: boolean }) {
+function Hero({ guestName, active, side }: { guestName: string; active: boolean; side: InvitationSide }) {
+  const invitation = wedding.invitations[side];
   const heroRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
@@ -139,22 +263,22 @@ function Hero({ guestName, active }: { guestName: string; active: boolean }) {
         <div className="hero-photo-veil"/>
       </motion.div>
       <div className="hero-content">
-        <motion.span initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 26 }} transition={{ duration: .65, ease }} className="eyebrow hero-kicker">THE WEDDING OF</motion.span>
+        <motion.span initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 26 }} transition={{ duration: .65, ease }} className="eyebrow hero-kicker">NGÀY HẠNH PHÚC CỦA</motion.span>
         <motion.h1 initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 48, scale: active ? 1 : .965 }} transition={{ duration: .82, ease }} className="hero-names"><span>{wedding.couple.groom}</span><em>&</em><span>{wedding.couple.bride}</span></motion.h1>
-        <motion.div initial={false} animate={{ opacity: active ? 1 : 0 }} transition={{ duration: .65, ease }} className="hero-date">{wedding.dateText}</motion.div>
+        <motion.div initial={false} animate={{ opacity: active ? 1 : 0 }} transition={{ duration: .65, ease }} className="hero-date">{invitation.dateText}</motion.div>
         <span className="hero-divider"/>
-        <p className="hero-subtitle">A NEW CHAPTER, TOGETHER</p>
+        <p className="hero-subtitle">Từ hôm nay, mình có nhau</p>
         {guestName && <p className="guest-personalization">Thật vui vì có bạn, <b>{guestName}</b>, ở đây ♡</p>}
       </div>
-      <div className="hero-vertical">LOVE IS A BEAUTIFUL JOURNEY</div>
-      <button className="hero-scroll" onClick={() => scrollTo('details')} aria-label="Khám phá câu chuyện của chúng mình"><ArrowDown size={20}/><span>SCROLL TO DISCOVER</span></button>
-      <div className="hero-stamp"><Heart size={18} fill="currentColor"/><span>FOREVER<br/>STARTS HERE</span></div>
+      <div className="hero-vertical">YÊU THƯƠNG LÀ MỘT HÀNH TRÌNH</div>
+      <button className="hero-scroll" onClick={() => scrollTo('details')} aria-label="Khám phá câu chuyện của chúng mình"><ArrowDown size={20}/><span>CUỘN ĐỂ KHÁM PHÁ</span></button>
+      <div className="hero-stamp"><Heart size={18} fill="currentColor"/><span>MỘT ĐỜI<br/>BÊN NHAU</span></div>
     </div>
   </section>;
 }
 function StorySection() {
   return <section id="story" className="story-section section-pad">
-    <div className="container"><SectionHeading kicker="EVERY LOVE STORY IS BEAUTIFUL" title="Chuyện chúng mình" caption="Những mảnh ký ức nhỏ đã đưa hai người đến một lời hẹn lớn."/>
+    <div className="container"><SectionHeading kicker="TỪ NHỮNG ĐIỀU THẬT NHỎ" title="Chuyện chúng mình" caption="Từ những lần gặp gỡ, những điều bé nhỏ đã đưa chúng mình đến một lời hẹn trăm năm."/>
       <div className="story-timeline"><Ribbon variant="loop" className="story-ribbon"/>
         {wedding.story.map((chapter, i) => <MemoryCard key={chapter.id} chapter={chapter} index={i} total={wedding.story.length}/>)}
       </div>
@@ -162,10 +286,10 @@ function StorySection() {
     </div>
   </section>;
 }
-function Countdown() {
-  const [parts, setParts] = useState(() => countdownParts(wedding.date));
-  useEffect(() => { const id = window.setInterval(() => setParts(countdownParts(wedding.date)), 1000); return () => window.clearInterval(id); }, []);
-  return <div className="countdown" aria-label="Đếm ngược đến ngày cưới">{parts.ended ? <span className="countdown-ended">Today is our forever ♡</span> : [ ['Ngày',parts.days], ['Giờ',parts.hours], ['Phút',parts.minutes], ['Giây',parts.seconds] ].map(([label,n]) => <div className="countdown-unit" key={label}><span>{withLeadingZero(Number(n))}</span><small>{label}</small></div>)}</div>;
+function Countdown({ date }: { date: string }) {
+  const [parts, setParts] = useState(() => countdownParts(date));
+  useEffect(() => { setParts(countdownParts(date)); const id = window.setInterval(() => setParts(countdownParts(date)), 1000); return () => window.clearInterval(id); }, [date]);
+  return <div className="countdown" aria-label="Đếm ngược đến ngày cưới">{parts.ended ? <span className="countdown-ended">Hôm nay là ngày chung đôi ♡</span> : [ ['Ngày',parts.days], ['Giờ',parts.hours], ['Phút',parts.minutes], ['Giây',parts.seconds] ].map(([label,n]) => <div className="countdown-unit" key={label}><span>{withLeadingZero(Number(n))}</span><small>{label}</small></div>)}</div>;
 }
 /**
  * The ring is local to the date tile, NOT the whole month/day/year row.
@@ -174,13 +298,13 @@ function Countdown() {
  * A subtle static guide circle ensures that 14 remains circled even before
  * the animation starts or if the user requests reduced motion.
  */
-function WeddingDayCircle() {
+function WeddingDayCircle({ date }: { date: string }) {
   const dayRef = useRef<HTMLSpanElement>(null);
   const inView = useInView(dayRef, { once: true, amount: .2, margin: '0px 0px -5% 0px' });
   const reduced = useReducedMotion();
-  const day = new Intl.DateTimeFormat('en-US', {
+  const day = new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh', day: 'numeric',
-  }).format(new Date(wedding.date));
+  }).format(new Date(date));
   return <span ref={dayRef} className="calendar-day-wrap">
     <svg className="calendar-ribbon-ring" viewBox="0 0 88 88" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <circle className="calendar-ribbon-guide" cx="44" cy="44" r="32" />
@@ -192,14 +316,15 @@ function WeddingDayCircle() {
     <strong>{day}</strong>
   </span>;
 }
-function WeddingInvitation({ guestName }: { guestName: string }) {
+function WeddingInvitation({ guestName, side }: { guestName: string; side: InvitationSide }) {
+  const invitation = wedding.invitations[side];
   const name = `${wedding.couple.groom} & ${wedding.couple.bride}`;
   const reduced = useReducedMotion();
   return <section id="details" className="invitation-section section-pad" aria-labelledby="invitation-heading">
     <div className="events-texture"/><Floral position="left"/>
     <div className="container invitation-layout">
       <div className="invitation-header">
-        <span className="eyebrow">TWO SOULS · ONE STORY</span>
+        <span className="eyebrow">HAI TRÁI TIM · MỘT LỜI HẸN ƯỚC</span>
         <motion.h2 id="invitation-heading" className="section-title"
           initial={reduced ? false : { opacity: 0, y: 25 }}
           whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .25 }}
@@ -210,7 +335,7 @@ function WeddingInvitation({ guestName }: { guestName: string }) {
       </div>
       <TwoHalvesHeart/>
       <motion.article className="formal-invitation" initial={{opacity:0,y:reduced?0:60,scale:reduced?1:.96}} whileInView={{opacity:1,y:0,scale:1}} viewport={{once:true,amount:.08}} transition={{duration:reduced?0:.95,ease}}>
-        <span className="formal-invitation-kicker">TOGETHER WITH OUR FAMILIES</span>
+        <span className="formal-invitation-kicker">NIỀM VUI CỦA HAI GIA ĐÌNH</span>
         <div className="invitation-parents">
           <motion.div initial={reduced?false:{opacity:0,x:-40}} whileInView={{opacity:1,x:0}} viewport={{once:true}} transition={{duration:.85,ease}}>
             <span>NHÀ TRAI</span><p>{wedding.couple.groomParents.map(parent=><span className="parent-name" key={parent}>{parent}</span>)}</p>
@@ -219,26 +344,26 @@ function WeddingInvitation({ guestName }: { guestName: string }) {
             <span>NHÀ GÁI</span><p>{wedding.couple.brideParents.map(parent=><span className="parent-name" key={parent}>{parent}</span>)}</p>
           </motion.div>
         </div>
-        <div className="invitation-solemn-text">Trân trọng báo tin lễ thành hôn của hai con</div>
+        <div className="invitation-solemn-text">{invitation.formalText}</div>
         <div className="invitation-couple-names"><span>{wedding.couple.groomFullName}</span><em>&</em><span>{wedding.couple.brideFullName}</span></div>
         <div className="formal-ornament" aria-hidden="true">✧ ─── ♡ ─── ✧</div>
         <span className="invitation-invite-copy">{guestName ? `Trân trọng kính mời ${guestName} cùng gia đình đến dự ngày vui` : `Thân mời bạn cùng gia đình đến dự ngày vui của chúng mình`}</span>
         <div className="invitation-date-title">NGÀY MÌNH CHUNG ĐÔI</div>
-        <Countdown/>
-        <div className="calendar-ornament"><span className="calendar-month">{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',month:'long'}).format(new Date(wedding.date)).toUpperCase()}</span><WeddingDayCircle/><span className="calendar-weekday">{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',weekday:'long'}).format(new Date(wedding.date)).toUpperCase()}</span></div>
-        <div className="event-cards">{wedding.events.map((event,i)=><motion.article key={event.id} className="event-card" initial={reduced?false:{opacity:0,x:i===0?-110:110,rotate:i===0?-2:2}} whileInView={{opacity:1,x:0,rotate:0}} viewport={{once:true,amount:.15}} transition={{type:'spring',stiffness:95,damping:19,delay:0}}>
+        <Countdown date={invitation.date}/>
+        <div className="calendar-ornament"><span className="calendar-month">{formatWeddingMonth(invitation.date)}</span><WeddingDayCircle date={invitation.date}/><span className="calendar-weekday">{`${formatWeddingWeekday(invitation.date)} · ${getWeddingDatePart(invitation.date, 'year')}`}</span></div>
+        <div className="event-cards">{invitation.events.map((event,i)=><motion.article key={event.id} className="event-card" initial={reduced?false:{opacity:0,x:i===0?-110:110,rotate:i===0?-2:2}} whileInView={{opacity:1,x:0,rotate:0}} viewport={{once:true,amount:.15}} transition={{type:'spring',stiffness:95,damping:19,delay:0}}>
           <motion.span className="event-corner-seal" aria-hidden="true" initial={reduced?false:{opacity:0,scale:1.7}} whileInView={{opacity:1,scale:1}} viewport={{once:true}} transition={{duration:.55,delay:.48}}>✦</motion.span>
-          <div className="event-symbol">{i===0?'✦':'♡'}</div><span className="eyebrow">{i===0?'THE CEREMONY':'THE CELEBRATION'}</span><h3>{event.label}</h3>
+          <div className="event-symbol">{i===0?'✦':'♡'}</div><span className="eyebrow">{i===0?'NGHI LỄ':'TIỆC MỪNG'}</span><h3>{event.label}</h3>
           <div className="event-detail"><CalendarDays size={18}/><span>{event.time}</span></div><div className="event-detail"><MapPin size={18}/><span><b>{event.venue}</b><small>{event.address}</small></span></div>
           {event.mapUrl?<a href={event.mapUrl} target="_blank" rel="noreferrer" className="button button-outline">Xem chỉ đường <ArrowUpRight size={16}/></a>:<span className="event-location-pending">Địa điểm sẽ được cập nhật</span>}
         </motion.article>)}</div>
         <p className="formal-invitation-thanks">Sự hiện diện của bạn là niềm vinh hạnh của gia đình chúng mình.</p>
-        <a className="calendar-add" href={buildCalendarUrl(name,wedding.date)} target="_blank" rel="noreferrer"><CalendarDays size={17}/> Thêm ngày cưới vào lịch <ArrowUpRight size={15}/></a>
+        <a className="calendar-add" href={buildCalendarUrl(name,invitation.date)} target="_blank" rel="noreferrer"><CalendarDays size={17}/> Thêm ngày cưới vào lịch <ArrowUpRight size={15}/></a>
       </motion.article>
     </div>
   </section>;
 }
-function GallerySection({ onPhotoOpen, onVideoOpen }: { onPhotoOpen: (index: number) => void; onVideoOpen: () => void }) {
+function GallerySection({ onPhotoOpen, onVideoOpen, side }: { onPhotoOpen: (index: number) => void; onVideoOpen: () => void; side: InvitationSide }) {
   const reduced = useReducedMotion();
   const [stackIndex, setStackIndex] = useState(0);
   const swipeStart = useRef<number | null>(null);
@@ -251,7 +376,7 @@ function GallerySection({ onPhotoOpen, onVideoOpen }: { onPhotoOpen: (index: num
         Ảnh: ưu tiên WebP 1200x1600 px (3:4); vài ảnh ngang 1600x1200 px (4:3).
         Mỗi ảnh đặt trong wedding.config.ts; không phải cắt ảnh cố định theo layout. */}
     <div className="gallery-exhibition" aria-label="Bộ sưu tập ảnh cưới">
-      <div className="gallery-scrapbook-decor" aria-hidden="true">love, always ♡ <span>our favourite moments</span></div>
+      <div className="gallery-scrapbook-decor" aria-hidden="true">Thương nhau, mãi nhé ♡ <span>Những khoảnh khắc của mình</span></div>
       <div className="gallery-grid">{wedding.gallery.map((image,i)=><motion.button
         key={`${image.src}-${i}`} className={`gallery-tile tile-${i%6}`} type="button" onClick={() => onPhotoOpen(i)}
         initial={reduced ? { opacity: 0 } : { opacity: 0, x: [-55, 27, 50, -31, 31, -36][i%6], y: [60,90,70,55,85,65][i%6], scale: .92 }}
@@ -262,11 +387,11 @@ function GallerySection({ onPhotoOpen, onVideoOpen }: { onPhotoOpen: (index: num
         {/* ẢNH COLLAGE: bản gốc khoảng 1200x1600px, WebP chất lượng 80–90;
             CSS object-fit:cover sẽ cắt trong khung, ảnh thật có thể tùy chỉnh object-position. */}
         <ImageFrame src={image.src} alt={image.alt}/>
-        <span className="gallery-print-caption" aria-hidden="true">{['the best kind of love','forever us ♡','little moments','with you, always','our favourite chapter','to be continued...'][i%6]}</span>
+        <span className="gallery-print-caption" aria-hidden="true">{['Một điều thật đẹp','Mãi là chúng mình ♡','Những điều bé nhỏ','Luôn có nhau','Chương đẹp nhất','Chuyện mình còn tiếp…'][i%6]}</span>
         <span className="gallery-zoom">XEM ẢNH <ArrowUpRight size={14}/></span>
       </motion.button>)}</div>
       <span className="gallery-scrapbook-flower" aria-hidden="true">✿</span>
-      <span className="gallery-scrapbook-note" aria-hidden="true">♡ 14.02.2027</span>
+      <span className="gallery-scrapbook-note" aria-hidden="true">♡ {formatWeddingShortDate(wedding.invitations[side].date)}</span>
     </div>
     {/* MOBILE: một chồng ảnh Polaroid. Vuốt để chuyển ảnh trên cùng; chạm mở lightbox.
         Ảnh tham khảo: 900x1200px hoặc 1200x1600px, tỷ lệ 3:4. */}
@@ -280,14 +405,14 @@ function GallerySection({ onPhotoOpen, onVideoOpen }: { onPhotoOpen: (index: num
           exit={reduced?{opacity:0}:{opacity:0,x:-30,rotate:-8,scale:.95}}
           transition={{duration:reduced?.12:.42,ease}}>
           <ImageFrame src={wedding.gallery[stackIndex].src} alt={wedding.gallery[stackIndex].alt}/>
-          <span>THE BEGINNING OF FOREVER</span>
+          <span>BÊN NHAU TỪ ĐÂY</span>
         </motion.button></AnimatePresence>
         <span className="gallery-stack-flower" aria-hidden="true">✿</span>
       </div>
       <div className="gallery-stack-switcher"><button type="button" onClick={()=>showNext(-1)} aria-label="Ảnh trước"><ArrowLeft size={20}/></button><span>{String(stackIndex+1).padStart(2,'0')} / {String(length).padStart(2,'0')}</span><button type="button" onClick={()=>showNext(1)} aria-label="Ảnh tiếp theo"><ArrowRight size={20}/></button></div>
       <p className="gallery-stack-hint">Vuốt để xem ảnh · Chạm để phóng to</p>
     </div>
-    <div className="gallery-actions"><span className="gallery-caption">✦ THE MOST BEAUTIFUL MOMENTS ARE SHARED ✦</span><button className="button button-primary gallery-view-all" onClick={() => onPhotoOpen(0)}>Xem toàn bộ album ảnh <ArrowUpRight size={16}/></button>{wedding.videoEmbedUrl && <button className="button button-outline" onClick={onVideoOpen}><Play size={16}/> Xem video cưới</button>}</div>
+    <div className="gallery-actions"><span className="gallery-caption">✦ GIỮ LẠI NHỮNG NGÀY THẬT ĐẸP ✦</span><button className="button button-primary gallery-view-all" onClick={() => onPhotoOpen(0)}>Xem toàn bộ album ảnh <ArrowUpRight size={16}/></button>{wedding.videoEmbedUrl && <button className="button button-outline" onClick={onVideoOpen}><Play size={16}/> Xem video cưới</button>}</div>
   </div></section>;
 }
 function Lightbox({ index, onClose, setIndex }: { index: number; onClose: () => void; setIndex: (index: number) => void }) {
@@ -305,7 +430,7 @@ function Lightbox({ index, onClose, setIndex }: { index: number; onClose: () => 
   const photo = wedding.gallery[index];
   return <motion.div className="lightbox-backdrop" role="dialog" aria-modal="true" aria-label="Xem album ảnh cưới" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}><button className="lightbox-close" aria-label="Đóng album" onClick={onClose}><X size={24}/></button><div className="lightbox-body" onClick={e=>e.stopPropagation()} onTouchStart={e=>{startX.current=e.changedTouches[0].clientX;}} onTouchEnd={e=>{if(startX.current===null)return;const delta=e.changedTouches[0].clientX-startX.current;if(Math.abs(delta)>45){delta>0?previous():next();}startX.current=null;}}><AnimatePresence mode="wait"><motion.img key={photo.src} className="lightbox-image" src={photo.src} alt={photo.alt} initial={reduced?{opacity:0}:{opacity:0,scale:.97,y:12}} animate={{opacity:1,scale:1,y:0}} exit={reduced?{opacity:0}:{opacity:0,scale:1.015,y:-7}} transition={reduced?{duration:.12}:{duration:.36,ease}}/></AnimatePresence><div className="lightbox-bottom"><button aria-label="Ảnh trước" onClick={previous}><ArrowLeft size={23}/></button><span>{String(index+1).padStart(2,'0')} — {String(total).padStart(2,'0')}</span><button aria-label="Ảnh sau" onClick={next}><ArrowRight size={23}/></button></div></div></motion.div>;
 }
-function WishesSection({ guestName, showToast }: { guestName: string; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
+function WishesSection({ guestName, side, showToast }: { guestName: string; side: InvitationSide; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [isDemo, setIsDemo] = useState(false);
   const [wishIndex, setWishIndex] = useState(0);
@@ -333,7 +458,7 @@ function WishesSection({ guestName, showToast }: { guestName: string; showToast:
     e.preventDefault();
     if(name.trim().length<2 || message.trim().length<5) { setNotice('Vui lòng điền tên và lời chúc từ 5 ký tự.'); return; }
     setBusy(true); setNotice('');
-    const result = await sendWish({guest_name:name.trim(),message:message.trim(),website,turnstile_token:challengeToken});
+    const result = await sendWish({guest_name:name.trim(),message:message.trim(),side,website,turnstile_token:challengeToken});
     setBusy(false);
     if (!result.ok) { setNotice(result.error || 'Có lỗi xảy ra. Vui lòng thử lại.'); return; }
     const toastMessage = result.demo
@@ -351,19 +476,19 @@ function WishesSection({ guestName, showToast }: { guestName: string; showToast:
     await refresh();
     setWishIndex(0);
   };
-  return <section id="wishes" className="wishes-section section-pad"><div className="wishes-grain"/><Floral position="right"/><div className="container wishes-container"><SectionHeading kicker="A LITTLE LOVE FROM EVERYONE" title="Những lời yêu thương" caption="Mỗi lời chúc là một kỷ niệm mà chúng mình sẽ luôn trân trọng."/>
+  return <section id="wishes" className="wishes-section section-pad"><div className="wishes-grain"/><Floral position="right"/><div className="container wishes-container"><SectionHeading kicker="TỪ NHỮNG NGƯỜI THƯƠNG" title="Những lời yêu thương" caption="Mỗi lời chúc là một kỷ niệm mà chúng mình sẽ luôn trân trọng."/>
     <Ribbon variant="heart" className="wishes-ribbon"/>
     <div className="wishes-display">
-      <div className="wishes-side-note"><Heart size={17} strokeWidth={1.4}/> LOVE LETTERS<br/>FROM OUR PEOPLE</div>
-      {active ? <div className="wish-carousel"><AnimatePresence mode="wait"><motion.button layout key={active.id} className={`wish-letter ${letterOpen?'wish-letter-open':''}`} type="button" onClick={()=>setLetterOpen(o=>!o)} initial={{opacity:0,y:70,rotate:-7,scale:.88}} animate={{opacity:1,y:0,rotate:letterOpen?0:-1,scale:1}} exit={{opacity:0,y:-12,rotate:2}} transition={{duration:.55,ease}} aria-label={letterOpen?'Thu nhỏ lời chúc':'Mở rộng lời chúc'}><span className="letter-ribbon-fold" aria-hidden="true"/><span className="letter-corner letter-top-left"/><span className="letter-corner letter-bottom-right"/><span className="wish-number">LETTER NO. {String(wishIndex+1).padStart(3,'0')}</span><Heart className="wish-heart" size={20} strokeWidth={1.3}/><span className="wish-to">Gửi hai bạn thương mến,</span><span className="wish-message">“{active.message}”</span><span className="wish-divider">✽</span><span className="wish-sender">— {active.guest_name} —</span><span className="wish-small">WITH LOVE & BEST WISHES</span><span className="letter-click-hint">{letterOpen?'Chạm để thu nhỏ':'Chạm để mở lá thư'}</span></motion.button></AnimatePresence><div className="wish-switcher"><button onClick={()=>go(-1)} aria-label="Lời chúc trước"><ArrowLeft size={19}/></button><span>{String(wishIndex+1).padStart(2,'0')} / {String(wishes.length).padStart(2,'0')}</span><button onClick={()=>go(1)} aria-label="Lời chúc tiếp theo"><ArrowRight size={19}/></button></div></div> : <div className="wishes-empty"><Mail size={35}/><h3>Lá thư đầu tiên</h3><p>Hãy là người đầu tiên gửi lời chúc đến cô dâu chú rể.</p></div>}
-      <div className="wishes-side-note wishes-side-right">LET WORDS BECOME<br/>BEAUTIFUL MEMORIES <Sparkles size={18}/></div>
+      <div className="wishes-side-note"><Heart size={17} strokeWidth={1.4}/> NHỮNG LÁ THƯ<br/>THƯƠNG MẾN</div>
+      {active ? <div className="wish-carousel"><AnimatePresence mode="wait"><motion.button layout key={active.id} className={`wish-letter ${letterOpen?'wish-letter-open':''}`} type="button" onClick={()=>setLetterOpen(o=>!o)} initial={{opacity:0,y:70,rotate:-7,scale:.88}} animate={{opacity:1,y:0,rotate:letterOpen?0:-1,scale:1}} exit={{opacity:0,y:-12,rotate:2}} transition={{duration:.55,ease}} aria-label={letterOpen?'Thu nhỏ lời chúc':'Mở rộng lời chúc'}><span className="letter-ribbon-fold" aria-hidden="true"/><span className="letter-corner letter-top-left"/><span className="letter-corner letter-bottom-right"/><span className="wish-number">LÁ THƯ SỐ {String(wishIndex+1).padStart(3,'0')}</span><Heart className="wish-heart" size={20} strokeWidth={1.3}/><span className="wish-to">Gửi hai bạn thương mến,</span><span className="wish-message">“{active.message}”</span><span className="wish-divider">✽</span><span className="wish-sender">— {active.guest_name} —</span><span className="wish-small">GỬI BẰNG CẢ TẤM LÒNG</span><span className="letter-click-hint">{letterOpen?'Chạm để thu nhỏ':'Chạm để mở lá thư'}</span></motion.button></AnimatePresence><div className="wish-switcher"><button onClick={()=>go(-1)} aria-label="Lời chúc trước"><ArrowLeft size={19}/></button><span>{String(wishIndex+1).padStart(2,'0')} / {String(wishes.length).padStart(2,'0')}</span><button onClick={()=>go(1)} aria-label="Lời chúc tiếp theo"><ArrowRight size={19}/></button></div></div> : <div className="wishes-empty"><Mail size={35}/><h3>Lá thư đầu tiên</h3><p>Hãy là người đầu tiên gửi lời chúc đến cô dâu chú rể.</p></div>}
+      <div className="wishes-side-note wishes-side-right">ĐỂ LỜI THƯƠNG<br/>THÀNH KỶ NIỆM <Sparkles size={18}/></div>
     </div>
     {isDemo && <p className="demo-caption">Các lời chúc đang hiển thị là dữ liệu minh họa. Khi kết nối Cloudflare D1, lời chúc thật sẽ xuất hiện tại đây.</p>}
-    <div className="last-letter"><p className="script-signature">The next letter could be yours...</p><button className="button button-primary" onClick={()=>{setNotice('');setWriteOpen(o=>!o);}}>{writeOpen?'Đóng lá thư':'Viết một lời yêu thương'} {writeOpen?<X size={16}/>:<ArrowRight size={16}/>}</button></div>
-<AnimatePresence>{writeOpen && <Modal onClose={()=>{setNotice('');setWriteOpen(false);}} label="Viết một lời yêu thương"><form className="wish-compose wish-compose-modal" onSubmit={submit}><div className="compose-inner"><div className="eyebrow">A LETTER FROM THE HEART</div><h3>Viết một điều thật đẹp...</h3><label htmlFor="wish-name">Tên của bạn</label><input id="wish-name" maxLength={70} value={name} onChange={e=>setName(e.target.value)} placeholder="Tên người gửi" required/><label htmlFor="wish-message">Lời chúc</label><textarea id="wish-message" maxLength={500} rows={4} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Gửi hai bạn một chút yêu thương..." required/><div className="form-character-count">{message.length}/500</div><div className="honeypot" aria-hidden="true"><label htmlFor="wish-website">Website (để trống)</label><input id="wish-website" value={website} onChange={e=>setWebsite(e.target.value)} tabIndex={-1} autoComplete="off"/></div><TurnstileWidget onToken={setChallengeToken}/><button className="button button-primary" disabled={busy} type="submit">{busy?'Đang gửi...':'Niêm phong & gửi thư'} <Send size={16}/></button></div>{notice && <p role="status" className="form-notice">{notice}</p>}</form></Modal>}</AnimatePresence>
+    <div className="last-letter"><p className="script-signature">Lá thư tiếp theo, biết đâu là của bạn…</p><button className="button button-primary" onClick={()=>{setNotice('');setWriteOpen(o=>!o);}}>{writeOpen?'Đóng lá thư':'Viết một lời yêu thương'} {writeOpen?<X size={16}/>:<ArrowRight size={16}/>}</button></div>
+<AnimatePresence>{writeOpen && <Modal onClose={()=>{setNotice('');setWriteOpen(false);}} label="Viết một lời yêu thương"><form className="wish-compose wish-compose-modal" onSubmit={submit}><div className="compose-inner"><div className="eyebrow">LÁ THƯ TỪ TRÁI TIM</div><h3>Viết một điều thật đẹp...</h3><label htmlFor="wish-name">Tên của bạn</label><input id="wish-name" maxLength={70} value={name} onChange={e=>setName(e.target.value)} placeholder="Tên người gửi" required/><label htmlFor="wish-message">Lời chúc</label><textarea id="wish-message" maxLength={500} rows={4} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Gửi hai bạn một chút yêu thương..." required/><div className="form-character-count">{message.length}/500</div><div className="honeypot" aria-hidden="true"><label htmlFor="wish-website">Website (để trống)</label><input id="wish-website" value={website} onChange={e=>setWebsite(e.target.value)} tabIndex={-1} autoComplete="off"/></div><TurnstileWidget onToken={setChallengeToken}/><button className="button button-primary" disabled={busy} type="submit">{busy?'Đang gửi...':'Niêm phong & gửi thư'} <Send size={16}/></button></div>{notice && <p role="status" className="form-notice">{notice}</p>}</form></Modal>}</AnimatePresence>
   </div></section>;
 }
-function RSVPForm({ guestName, onConfirmed, onClose, showToast }: { guestName: string; onConfirmed: () => void; onClose: () => void; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
+function RSVPForm({ guestName, side, onConfirmed, onClose, showToast }: { guestName: string; side: InvitationSide; onConfirmed: () => void; onClose: () => void; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
   const [name,setName]=useState(guestName);
   const [attending,setAttending]=useState(true);
   const [note,setNote]=useState('');
@@ -385,7 +510,7 @@ function RSVPForm({ guestName, onConfirmed, onClose, showToast }: { guestName: s
     setBusy(true);setFeedback('');
     // Giao diện chỉ thu thập tên + lời nhắn/lời chúc. Vẫn giữ API/D1 hiện có:
     // một người nếu đến, 0 nếu vắng, event_id chung để quản trị biết đây là RSVP toàn lễ cưới.
-    const response=await sendRSVP({guest_name:name.trim(),attending,guest_count:attending?1:0,event_id:'wedding',note:note.trim(),website,turnstile_token:challengeToken});
+    const response=await sendRSVP({guest_name:name.trim(),attending,guest_count:attending?1:0,event_id:'wedding',side,note:note.trim(),website,turnstile_token:challengeToken});
     setBusy(false);
     if (!response.ok) {
       setFeedback(response.error || 'Có lỗi xảy ra. Vui lòng thử lại.');
@@ -405,7 +530,7 @@ function RSVPForm({ guestName, onConfirmed, onClose, showToast }: { guestName: s
   };
   return <div className="rsvp-modal-body"><p className="rsvp-modal-caption">Một lời hồi âm nhỏ từ bạn sẽ khiến ngày vui thêm trọn vẹn ♡</p>
     <motion.form className="rsvp-form" onSubmit={submit} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.42,ease}}>
-      <div className="rsvp-form-top"><span className="eyebrow">KINDLY REPLY</span><h3>Xác nhận tham dự</h3></div>
+      <div className="rsvp-form-top"><span className="eyebrow">MONG NHẬN ĐƯỢC HỒI ÂM</span><h3>Xác nhận tham dự</h3></div>
       <div className="attendance-options" role="tablist" aria-label="Xác nhận tham dự">
         <button id="rsvp-attend" role="tab" type="button" aria-selected={attending} aria-controls="rsvp-fields" className={attending?'selected':''} onClick={()=>{setAttending(true);setFeedback('');}}><Heart size={15}/> Mình sẽ đến</button>
         <button id="rsvp-decline" role="tab" type="button" aria-selected={!attending} aria-controls="rsvp-fields" className={!attending?'selected':''} onClick={()=>{setAttending(false);setFeedback('');}}>Rất tiếc, không thể</button>
@@ -436,8 +561,8 @@ function GiftSection() {
   };
   const [copied,setCopied]=useState('');
   const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);setCopied(text);setTimeout(()=>setCopied(''),2300);}catch{setCopied('Không thể sao chép — vui lòng chọn số tài khoản thủ công.');}};
-  return <section id="gift" className="gift-section section-pad"><div className="container gift-layout"><SectionHeading kicker="WITH ALL OUR LOVE" title="Hộp quà yêu thương" caption="Sự hiện diện và những lời chúc của bạn đã là món quà quý giá nhất đối với chúng mình."/><div className="gift-object-wrap"><motion.button initial={false} whileInView={reduced?undefined:{rotate:[0,-5,4,-3,2,0],y:[0,-6,-3,0]}} viewport={{once:true,amount:.6}} whileHover={reduced?undefined:{rotate:-2,y:-9}} transition={{duration:1.1,ease}} className={`gift-object ${unwrapping?'gift-object-unwrapping':''}`} aria-label="Mở hộp quà mừng cưới" onClick={openGift} disabled={unwrapping}><div className="gift-lid"/><div className="gift-box-face"><span className="gift-box-symbol">{wedding.couple.initials}</span><span className="gift-box-caption">WITH LOVE</span></div><div className="gift-ribbon-vertical"/><div className="gift-ribbon-horizontal"/><div className="gift-bow"><span/><span/></div><span className="gift-floating-star gift-star-a">✧</span><span className="gift-floating-star gift-star-b">✧</span></motion.button></div><button className="button button-outline gift-open-btn" onClick={openGift} disabled={unwrapping}>Mở hộp quà <Gift size={16}/></button><p className="gift-bottom-note">Your love is the greatest gift of all.</p></div>
-    <AnimatePresence>{open && <Modal delay={reduced?0:.12} onClose={()=>{setOpen(false);setUnwrapping(false);}} label="Thông tin mừng cưới"><div className="gift-modal-content"><span className="eyebrow">A GIFT OF LOVE</span><h3>Một chút yêu thương</h3><p>Những lời chúc và sự hiện diện của bạn là niềm hạnh phúc của chúng mình. Nếu muốn gửi món quà nhỏ, bạn có thể sử dụng thông tin bên dưới.</p>{wedding.bankAccounts.length ? <div className="gift-bank-list">{wedding.bankAccounts.map(account=><div className="bank-card" key={account.accountNumber}><span className="eyebrow">{account.role} · {account.bank}</span><h4>{account.owner}</h4>{account.qrImage && <ImageFrame src={account.qrImage} alt={`Mã QR chuyển khoản của ${account.owner}`} className="bank-qr"/>}<p className="bank-account-number">{account.accountNumber}</p><button className="button button-outline" onClick={()=>copy(account.accountNumber)}>{copied===account.accountNumber?<Check size={15}/>:<Copy size={15}/>} {copied===account.accountNumber?'Đã sao chép':'Sao chép số tài khoản'}</button></div>)}</div> : <div className="gift-empty"><Mail size={28}/><p>Thông tin mừng cưới sẽ được cập nhật.<br/>Bạn có thể thay tài khoản & QR thật tại <code>src/wedding.config.ts</code>.</p></div>}{copied.startsWith('Không thể') && <p role="status">{copied}</p>}</div></Modal>}</AnimatePresence>
+  return <section id="gift" className="gift-section section-pad"><div className="container gift-layout"><SectionHeading kicker="THAY LỜI CẢM ƠN" title="Hộp quà yêu thương" caption="Sự hiện diện và những lời chúc của bạn đã là món quà quý giá nhất đối với chúng mình."/><div className="gift-object-wrap"><motion.button initial={false} whileInView={reduced?undefined:{rotate:[0,-5,4,-3,2,0],y:[0,-6,-3,0]}} viewport={{once:true,amount:.6}} whileHover={reduced?undefined:{rotate:-2,y:-9}} transition={{duration:1.1,ease}} className={`gift-object ${unwrapping?'gift-object-unwrapping':''}`} aria-label="Mở hộp quà mừng cưới" onClick={openGift} disabled={unwrapping}><div className="gift-lid"/><div className="gift-box-face"><span className="gift-box-symbol">{wedding.couple.initials}</span><span className="gift-box-caption">GỬI YÊU THƯƠNG</span></div><div className="gift-ribbon-vertical"/><div className="gift-ribbon-horizontal"/><div className="gift-bow"><span/><span/></div><span className="gift-floating-star gift-star-a">✧</span><span className="gift-floating-star gift-star-b">✧</span></motion.button></div><button className="button button-outline gift-open-btn" onClick={openGift} disabled={unwrapping}>Mở hộp quà <Gift size={16}/></button><p className="gift-bottom-note">Tấm lòng của bạn là món quà quý giá nhất.</p></div>
+    <AnimatePresence>{open && <Modal delay={reduced?0:.12} onClose={()=>{setOpen(false);setUnwrapping(false);}} label="Thông tin mừng cưới"><div className="gift-modal-content"><span className="eyebrow">MỘT CHÚT TẤM LÒNG</span><h3>Một chút yêu thương</h3><p>Những lời chúc và sự hiện diện của bạn là niềm hạnh phúc của chúng mình. Nếu muốn gửi món quà nhỏ, bạn có thể sử dụng thông tin bên dưới.</p>{wedding.bankAccounts.length ? <div className="gift-bank-list">{wedding.bankAccounts.map(account=><div className="bank-card" key={account.accountNumber}><span className="eyebrow">{account.role} · {account.bank}</span><h4>{account.owner}</h4>{account.qrImage && <ImageFrame src={account.qrImage} alt={`Mã QR chuyển khoản của ${account.owner}`} className="bank-qr"/>}<p className="bank-account-number">{account.accountNumber}</p><button className="button button-outline" onClick={()=>copy(account.accountNumber)}>{copied===account.accountNumber?<Check size={15}/>:<Copy size={15}/>} {copied===account.accountNumber?'Đã sao chép':'Sao chép số tài khoản'}</button></div>)}</div> : <div className="gift-empty"><Mail size={28}/><p>Thông tin mừng cưới sẽ được cập nhật.<br/>Bạn có thể thay tài khoản & QR thật tại <code>src/wedding.config.ts</code>.</p></div>}{copied.startsWith('Không thể') && <p role="status">{copied}</p>}</div></Modal>}</AnimatePresence>
   </section>;
 }
 function Modal({ onClose, label, children, delay=0, variant }: { onClose: () => void; label: string; children: ReactNode; delay?:number; variant?: "rsvp" }) {
@@ -472,12 +597,14 @@ function Modal({ onClose, label, children, delay=0, variant }: { onClose: () => 
     </motion.div>
   </motion.div>,document.body);
 }
-function Footer({ onReplay }: { onReplay: () => void }) {
+function Footer({ onReplay, side }: { onReplay: () => void; side: InvitationSide }) {
   const [shared,setShared]=useState(false);
   const share=async()=>{try {if(navigator.share)await navigator.share({title:'Thiệp cưới',text:'Trân trọng kính mời bạn đến chung vui!',url:window.location.href});else {await navigator.clipboard.writeText(window.location.href);setShared(true);setTimeout(()=>setShared(false),2500);}}catch{/* user cancelled share */}};
-  return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">THE BEGINNING OF OUR FOREVER</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><button className="footer-replay" onClick={onReplay}><RotateCcw size={15}/> Xem lại hiệu ứng mở thiệp</button><a className="footer-replay" href="/admin" style={{ opacity: 0.65, fontSize: '0.8rem', marginTop: '4px', display:'inline-flex', alignItems:'center', gap:'6px' }}><Lock size={13}/> Quản trị thiệp</a><span className="footer-made">MADE WITH LOVE · THE LIVING RIBBON</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
+  return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">KHỞI ĐẦU CỦA MỘT ĐỜI BÊN NHAU</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.invitations[side].dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><button className="footer-replay" onClick={onReplay}><RotateCcw size={15}/> Xem lại hiệu ứng mở thiệp</button><a className="footer-replay" href="/admin" style={{ opacity: 0.65, fontSize: '0.8rem', marginTop: '4px', display:'inline-flex', alignItems:'center', gap:'6px' }}><Lock size={13}/> Quản trị thiệp</a><span className="footer-made">ĐƯỢC DỆT NÊN TỪ YÊU THƯƠNG</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
 }
 export default function App() {
+  const [side, setSide] = useState<InvitationSide | null>(getInitialInvitationSide);
+  const activeSide = side || 'groom';
   const [guestName] = useState(getGuestName);
   const [opened,setOpened]=useState(()=>!wedding.sections.opening);
   const [heroRevealed,setHeroRevealed]=useState(()=>!wedding.sections.opening);
@@ -533,6 +660,19 @@ export default function App() {
   });
   const audioRef=useRef<HTMLAudioElement>(null);
   useEffect(()=>{if(!opened){window.scrollTo({top:0,behavior:'auto'});document.body.style.overflow='hidden';return()=>{document.body.style.overflow='';};}},[opened]);
+  const chooseSide = (chosen: InvitationSide) => {
+    setSide(chosen);
+    setInvitationUrlSide(chosen);
+  };
+  const switchSide = (chosen: InvitationSide) => {
+    if (chosen === side) return;
+    if (rsvpOpen && !window.confirm('Đổi thiệp sẽ đóng form xác nhận đang nhập. Bạn muốn tiếp tục?')) return;
+    // Mỗi bên có ngày, sự kiện và dữ liệu RSVP riêng; không đổi ảnh hay bố cục.
+    chooseSide(chosen);
+    setRsvpOpen(false);
+    setRsvpConfirmed(false);
+    setAnimationCycle(c => c + 1);
+  };
   const enter=()=>{setHeroRevealed(true);setOpened(true);};
   const replayStory = () => {
     // Trở về đầu ngay trước khi render lại, tránh useInView kích hoạt ở scroll cũ.
@@ -553,20 +693,20 @@ export default function App() {
     }
   };
   return <>
-    <AnimatePresence>{!opened && <Opening onBegin={()=>{void beginMusic();}} onReveal={()=>setHeroRevealed(true)} onEnter={enter} guestName={guestName}/>}</AnimatePresence>
+    <AnimatePresence>{!opened && <Opening side={side} onSelect={chooseSide} onBegin={()=>{void beginMusic();}} onReveal={()=>setHeroRevealed(true)} onEnter={enter} guestName={guestName}/>}</AnimatePresence>
     {wedding.musicUrl && <audio ref={audioRef} src={wedding.musicUrl} loop preload="none" onEnded={()=>setPlaying(false)} />}
-    <Header opened={opened} onRSVP={()=>setRsvpOpen(true)}/>
+    <Header opened={opened} side={side} onSwitchSide={switchSide} onRSVP={()=>setRsvpOpen(true)}/>
     <HeartRain visible={opened && wedding.effects.heartRain} />
     {wedding.isDemo && opened && <div className="demo-ribbon">BẢN XEM TRƯỚC — HÃY THAY DỮ LIỆU TẠI <code>wedding.config.ts</code></div>}
     <main key={animationCycle}>
-      <Hero guestName={guestName} active={heroRevealed}/>
-      {(wedding.sections.couple || wedding.sections.events || wedding.sections.countdown) && <WeddingInvitation guestName={guestName}/>}
+      <Hero guestName={guestName} active={heroRevealed} side={activeSide}/>
+      {(wedding.sections.couple || wedding.sections.events || wedding.sections.countdown) && <WeddingInvitation guestName={guestName} side={activeSide}/>}
       {wedding.sections.story && <><JourneyTransition number="01" title="Chuyện chúng mình" motif="heart"/><StorySection/></>}
-      {wedding.sections.gallery && <><JourneyTransition number="02" title="Những khung hình yêu" motif="loop"/><GallerySection onPhotoOpen={setLightbox} onVideoOpen={()=>setVideoOpen(true)}/></>}
-      {wedding.sections.wishes && <><JourneyTransition number="03" title="Những lá thư yêu thương" motif="letter"/><WishesSection guestName={guestName} showToast={showToast}/></>}
+      {wedding.sections.gallery && <><JourneyTransition number="02" title="Những khung hình yêu" motif="loop"/><GallerySection side={activeSide} onPhotoOpen={setLightbox} onVideoOpen={()=>setVideoOpen(true)}/></>}
+      {wedding.sections.wishes && <><JourneyTransition number="03" title="Những lá thư yêu thương" motif="letter"/><WishesSection guestName={guestName} side={activeSide} showToast={showToast}/></>}
       {wedding.sections.gift && <><JourneyTransition number="04" title="Một chút yêu thương" motif="bow"/><GiftSection/></>}
     </main>
-    <Footer onReplay={replayStory}/>
+    <Footer onReplay={replayStory} side={activeSide}/>
     {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>
       {opened && wedding.sections.rsvp && rsvpVisible && !rsvpOpen &&
@@ -581,7 +721,7 @@ export default function App() {
         </motion.div>}
     </AnimatePresence>
     <AnimatePresence>
-      {rsvpOpen && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự" variant="rsvp"><RSVPForm guestName={guestName} onConfirmed={()=>setRsvpConfirmed(true)} onClose={()=>setRsvpOpen(false)} showToast={showToast}/></Modal>}
+      {rsvpOpen && <Modal onClose={()=>setRsvpOpen(false)} label="Xác nhận tham dự" variant="rsvp"><RSVPForm guestName={guestName} side={activeSide} onConfirmed={()=>setRsvpConfirmed(true)} onClose={()=>setRsvpOpen(false)} showToast={showToast}/></Modal>}
     </AnimatePresence>
     <AnimatePresence>{lightbox!==null && <Lightbox index={lightbox} setIndex={setLightbox} onClose={()=>setLightbox(null)}/>}</AnimatePresence>
     <AnimatePresence>{videoOpen && Boolean(wedding.videoEmbedUrl) && <Modal onClose={()=>setVideoOpen(false)} label="Video cưới"><div className="video-shell"><iframe src={`${wedding.videoEmbedUrl}${String(wedding.videoEmbedUrl).includes('?')?'&':'?'}autoplay=1`} title="Video cưới" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div></Modal>}</AnimatePresence>

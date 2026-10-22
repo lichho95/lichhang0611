@@ -1,6 +1,7 @@
 import { wedding } from '../wedding.config';
+import type { InvitationSide, StoredSide, SideFilter } from './invitation-side';
 
-export type Wish = { id: number; guest_name: string; message: string; created_at: string; status?: 'pending' | 'approved' | 'hidden' };
+export type Wish = { id: number; guest_name: string; message: string; created_at: string; side?: StoredSide; status?: 'pending' | 'approved' | 'hidden' };
 export type Result = { ok: boolean; demo?: boolean; pending?: boolean; error?: string };
 export const WISH_KEY = 'living-ribbon-demo-wishes';
 export const RSVP_KEY = 'living-ribbon-demo-rsvp';
@@ -22,6 +23,7 @@ export type AdminWish = {
   guest_name: string;
   message: string;
   status: 'pending' | 'approved' | 'hidden';
+  side: StoredSide;
   created_at: string;
 };
 
@@ -31,6 +33,7 @@ export type AdminRSVP = {
   attending: number | boolean;
   guest_count: number;
   event_id: string;
+  side: StoredSide;
   note: string;
   created_at: string;
 };
@@ -78,13 +81,14 @@ export async function loadWishes(): Promise<{ wishes: Wish[]; demo: boolean }> {
   }
 }
 
-export async function sendWish(payload: { guest_name: string; message: string; website?: string; turnstile_token?: string }): Promise<Result> {
+export async function sendWish(payload: { guest_name: string; message: string; side: InvitationSide; website?: string; turnstile_token?: string }): Promise<Result> {
   if (import.meta.env.DEV) {
     const stored = safeRead<Wish[]>(WISH_KEY, []);
     safeWrite(WISH_KEY, [{
       id: Date.now(),
       guest_name: payload.guest_name,
       message: payload.message,
+      side: payload.side,
       status: 'pending',
       created_at: new Date().toISOString()
     }, ...stored]);
@@ -97,7 +101,7 @@ export async function sendWish(payload: { guest_name: string; message: string; w
   } catch { return { ok: false, error: 'Không kết nối được máy chủ. Vui lòng thử lại.' }; }
 }
 
-export async function sendRSVP(payload: { guest_name: string; attending: boolean; guest_count: number; event_id: string; note: string; website?: string; turnstile_token?: string }): Promise<Result> {
+export async function sendRSVP(payload: { guest_name: string; side: InvitationSide; attending: boolean; guest_count: number; event_id: string; note: string; website?: string; turnstile_token?: string }): Promise<Result> {
   if (import.meta.env.DEV) {
     const rsvpItem: AdminRSVP = {
       id: Date.now(),
@@ -105,6 +109,7 @@ export async function sendRSVP(payload: { guest_name: string; attending: boolean
       attending: payload.attending ? 1 : 0,
       guest_count: payload.guest_count,
       event_id: payload.event_id,
+      side: payload.side,
       note: payload.note || '',
       created_at: new Date().toISOString()
     };
@@ -121,19 +126,19 @@ export async function sendRSVP(payload: { guest_name: string; attending: boolean
 // ==================== CÁC HÀM QUẢN TRỊ (ADMIN API) ====================
 
 const DEMO_SEED_RSVPS: AdminRSVP[] = [
-  { id: 101, guest_name: 'Trần Văn Hoàng & Bạn', attending: 1, guest_count: 2, event_id: 'wedding', note: 'Chúc hai bạn trăm năm hạnh phúc!', created_at: '2026-10-18T14:20:00Z' },
-  { id: 102, guest_name: 'Nguyễn Thị Mai', attending: 1, guest_count: 1, event_id: 'wedding', note: 'Sẽ có mặt chung vui đúng giờ nhé.', created_at: '2026-10-19T09:15:00Z' },
-  { id: 103, guest_name: 'Lê Quang Huy', attending: 0, guest_count: 0, event_id: 'wedding', note: 'Hôm đó mình có lịch công tác, gửi lời chúc mừng 2 bạn từ xa nhé!', created_at: '2026-10-20T11:00:00Z' },
+  { id: 101, guest_name: 'Trần Văn Hoàng & Bạn', attending: 1, guest_count: 2, event_id: 'wedding', side: 'legacy', note: 'Chúc hai bạn trăm năm hạnh phúc!', created_at: '2026-10-18T14:20:00Z' },
+  { id: 102, guest_name: 'Nguyễn Thị Mai', attending: 1, guest_count: 1, event_id: 'wedding', side: 'legacy', note: 'Sẽ có mặt chung vui đúng giờ nhé.', created_at: '2026-10-19T09:15:00Z' },
+  { id: 103, guest_name: 'Lê Quang Huy', attending: 0, guest_count: 0, event_id: 'wedding', side: 'legacy', note: 'Hôm đó mình có lịch công tác, gửi lời chúc mừng 2 bạn từ xa nhé!', created_at: '2026-10-20T11:00:00Z' },
 ];
 
 function getLocalAdminData(): { wishes: AdminWish[]; rsvps: AdminRSVP[]; stats: AdminStats } {
   let wishes = safeRead<AdminWish[]>(WISH_KEY, []);
   if (wishes.length === 0) {
     wishes = [
-      { id: 1, guest_name: 'Người bạn thân', message: 'Chúc hai bạn luôn chọn nhau, từ những ngày rực rỡ cho đến những ngày thật bình yên.', status: 'approved', created_at: '2026-10-01T09:30:00Z' },
-      { id: 2, guest_name: 'Một người thương', message: 'Mong mỗi sớm mai thức dậy, hai bạn đều có lý do để mỉm cười cùng nhau. Trăm năm hạnh phúc nhé!', status: 'approved', created_at: '2026-10-02T10:30:00Z' },
-      { id: 3, guest_name: 'Đồng nghiệp công ty', message: 'Chúc mừng hạnh phúc hai bạn! Đợi uống rượu mừng nha.', status: 'pending', created_at: new Date(Date.now() - 3600000).toISOString() },
-      { id: 4, guest_name: 'Bạn thời đại học', message: 'Hẹn gặp hai bạn ở tiệc cưới thật vui nha!', status: 'pending', created_at: new Date().toISOString() },
+      { id: 1, guest_name: 'Người bạn thân', message: 'Chúc hai bạn luôn chọn nhau, từ những ngày rực rỡ cho đến những ngày thật bình yên.', status: 'approved', side: 'legacy', created_at: '2026-10-01T09:30:00Z' },
+      { id: 2, guest_name: 'Một người thương', message: 'Mong mỗi sớm mai thức dậy, hai bạn đều có lý do để mỉm cười cùng nhau. Trăm năm hạnh phúc nhé!', status: 'approved', side: 'legacy', created_at: '2026-10-02T10:30:00Z' },
+      { id: 3, guest_name: 'Đồng nghiệp công ty', message: 'Chúc mừng hạnh phúc hai bạn! Đợi uống rượu mừng nha.', status: 'pending', side: 'legacy', created_at: new Date(Date.now() - 3600000).toISOString() },
+      { id: 4, guest_name: 'Bạn thời đại học', message: 'Hẹn gặp hai bạn ở tiệc cưới thật vui nha!', status: 'pending', side: 'legacy', created_at: new Date().toISOString() },
     ];
     safeWrite(WISH_KEY, wishes);
   }
@@ -257,10 +262,10 @@ export async function updateWishStatus(pin: string, id: number, status: 'approve
   }
 }
 
-export async function approveAllWishes(pin: string): Promise<Result> {
+export async function approveAllWishes(pin: string, side: SideFilter = 'all'): Promise<Result> {
   if (import.meta.env.DEV) {
     const wishes = safeRead<AdminWish[]>(WISH_KEY, []);
-    const updated = wishes.map(w => w.status === 'pending' ? { ...w, status: 'approved' as const } : w);
+    const updated = wishes.map(w => w.status === 'pending' && (side === 'all' || (w.side || 'legacy') === side) ? { ...w, status: 'approved' as const } : w);
     safeWrite(WISH_KEY, updated);
     return { ok: true, demo: true };
   }
@@ -269,7 +274,7 @@ export async function approveAllWishes(pin: string): Promise<Result> {
     const res = await fetch('/api/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pin.trim()}` },
-      body: JSON.stringify({ action: 'approve_all_wishes' })
+      body: JSON.stringify({ action: 'approve_all_wishes', side })
     });
     if (!res.ok) return { ok: false, error: await parseError(res) };
     return { ok: true };

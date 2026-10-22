@@ -5,6 +5,7 @@ import {
   EyeOff, CheckCheck, ShieldCheck, LogOut
 } from 'lucide-react';
 import { wedding } from '../wedding.config';
+import { sideLabels, type SideFilter } from '../lib/invitation-side';
 import {
   adminLogin, fetchAdminData, updateWishStatus, approveAllWishes,
   deleteWish, deleteRSVP, type AdminWish, type AdminRSVP, type AdminStats
@@ -31,6 +32,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
   const [isDemo, setIsDemo] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'wishes' | 'rsvps'>('wishes');
+  const [sideFilter, setSideFilter] = useState<SideFilter>('all');
   const [wishFilter, setWishFilter] = useState<'all' | 'pending' | 'approved' | 'hidden'>('pending');
   const [rsvpSearch, setRsvpSearch] = useState('');
   const [rsvpStatusFilter, setRsvpStatusFilter] = useState<'all' | 'attending' | 'declined'>('all');
@@ -118,10 +120,10 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
   };
 
   const handleApproveAll = async () => {
-    if (!window.confirm('Bạn có chắc muốn duyệt TẤT CẢ các lời chúc đang chờ không?')) return;
-    const res = await approveAllWishes(pin);
+    if (!window.confirm(`Duyệt tất cả lời chúc đang chờ của ${sideFilter === 'all' ? 'cả hai bên' : sideLabels[sideFilter]}?`)) return;
+    const res = await approveAllWishes(pin, sideFilter);
     if (res.ok) {
-      setWishes(prev => prev.map(w => w.status === 'pending' ? { ...w, status: 'approved' } : w));
+      setWishes(prev => prev.map(w => w.status === 'pending' && (sideFilter === 'all' || (w.side || 'legacy') === sideFilter) ? { ...w, status: 'approved' } : w));
       void loadData(pin, true);
       showToast('Đã duyệt tất cả lời chúc đang chờ!');
     } else {
@@ -154,35 +156,24 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
     }
   };
 
-  // Lọc lời chúc
-  const filteredWishes = useMemo(() => {
-    if (wishFilter === 'all') return wishes;
-    return wishes.filter(w => (w.status || 'pending') === wishFilter);
-  }, [wishes, wishFilter]);
-
-  // Lọc RSVP
-  const filteredRsvps = useMemo(() => {
-    return rsvps.filter(r => {
-      const isAttending = r.attending === 1 || r.attending === true;
-      if (rsvpStatusFilter === 'attending' && !isAttending) return false;
-      if (rsvpStatusFilter === 'declined' && isAttending) return false;
-      if (rsvpSearch.trim()) {
-        const query = rsvpSearch.toLowerCase();
-        const matchName = r.guest_name.toLowerCase().includes(query);
-        const matchNote = (r.note || '').toLowerCase().includes(query);
-        if (!matchName && !matchNote) return false;
-      }
-      return true;
-    });
-  }, [rsvps, rsvpStatusFilter, rsvpSearch]);
-
-  const pendingCount = useMemo(() => {
-    return wishes.filter(w => w.status === 'pending').length;
-  }, [wishes]);
+  // Lọc theo từng nhà cho CẢ hai bảng, không đổi trạng thái gốc trên server.
+  const sideWishes = useMemo(() => wishes.filter(w => sideFilter === 'all' || (w.side || 'legacy') === sideFilter), [wishes, sideFilter]);
+  const sideRsvps = useMemo(() => rsvps.filter(r => sideFilter === 'all' || (r.side || 'legacy') === sideFilter), [rsvps, sideFilter]);
+  const filteredWishes = useMemo(() => sideWishes.filter(w => wishFilter === 'all' || (w.status || 'pending') === wishFilter), [sideWishes, wishFilter]);
+  const filteredRsvps = useMemo(() => sideRsvps.filter(r => {
+    const isAttending = r.attending === 1 || r.attending === true;
+    if (rsvpStatusFilter === 'attending' && !isAttending) return false;
+    if (rsvpStatusFilter === 'declined' && isAttending) return false;
+    const q = rsvpSearch.trim().toLowerCase();
+    return !q || r.guest_name.toLowerCase().includes(q) || (r.note || '').toLowerCase().includes(q);
+  }), [sideRsvps, rsvpStatusFilter, rsvpSearch]);
+  const pendingCount = sideWishes.filter(w => w.status === 'pending').length;
+  const sideAttending = sideRsvps.filter(r=>r.attending === 1 || r.attending === true);
+  const sideDeclined = sideRsvps.length - sideAttending.length;
 
   // Xuất file CSV
   const handleExportCSV = () => {
-    const headers = ['STT', 'Họ và tên khách', 'Trạng thái', 'Số khách tham dự', 'Lời nhắn / Ghi chú', 'Thời gian gửi'];
+    const headers = ['STT', 'Họ và tên khách', 'Bên mời', 'Trạng thái', 'Số khách tham dự', 'Lời nhắn / Ghi chú', 'Thời gian gửi'];
     const rows = filteredRsvps.map((r, i) => {
       const isAttending = r.attending === 1 || r.attending === true;
       const statusText = isAttending ? 'Tham dự' : 'Báo vắng';
@@ -192,6 +183,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
       return [
         i + 1,
         `"${r.guest_name.replace(/"/g, '""')}"`,
+        `"${sideLabels[r.side || 'legacy']}"`,
         `"${statusText}"`,
         guestCount,
         `"${note}"`,
@@ -204,7 +196,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `danh-sach-khach-cuoi-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `danh-sach-khach-cuoi-${sideFilter}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -214,26 +206,26 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
 
   // Sao chép danh sách tóm tắt gửi Zalo/Chat
   const handleCopySummary = async () => {
-    const attendingList = rsvps.filter(r => r.attending === 1 || r.attending === true);
-    const declinedList = rsvps.filter(r => r.attending === 0 || r.attending === false);
+    const attendingList = sideRsvps.filter(r => r.attending === 1 || r.attending === true);
+    const declinedList = sideRsvps.filter(r => r.attending === 0 || r.attending === false);
 
-    let text = `📋 DANH SÁCH ĐĂNG KÝ THAM DỰ HÔN LỄ\n`;
+    let text = `📋 DANH SÁCH ĐĂNG KÝ THAM DỰ HÔN LỄ — ${sideFilter === 'all' ? 'Tất cả' : sideLabels[sideFilter]}\n`;
     text += `👰 ${wedding.couple.bride} & 🤵 ${wedding.couple.groom}\n`;
     text += `Cập nhật lúc: ${new Date().toLocaleString('vi-VN')}\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `✨ TỔNG QUAN: ${stats?.total_attending_guests || attendingList.reduce((s, r) => s + (Number(r.guest_count) || 1), 0)} khách tham dự | ${declinedList.length} khách báo bận\n\n`;
+    text += `✨ TỔNG QUAN: ${attendingList.reduce((s, r) => s + (Number(r.guest_count) || 1), 0)} khách tham dự | ${declinedList.length} khách báo bận\n\n`;
 
     text += `✅ DANH SÁCH THAM DỰ (${attendingList.length} phản hồi):\n`;
     attendingList.forEach((r, idx) => {
       const noteText = r.note ? `\n   💬 Lời nhắn: "${r.note}"` : '';
-      text += `${idx + 1}. ${r.guest_name} — ${r.guest_count} người${noteText}\n`;
+      text += `${idx + 1}. ${r.guest_name} (${sideLabels[r.side || 'legacy']}) — ${r.guest_count} người${noteText}\n`;
     });
 
     if (declinedList.length > 0) {
       text += `\n❌ BÁO VẮNG (${declinedList.length} người):\n`;
       declinedList.forEach((r, idx) => {
         const noteText = r.note ? ` — "${r.note}"` : '';
-        text += `${idx + 1}. ${r.guest_name}${noteText}\n`;
+        text += `${idx + 1}. ${r.guest_name} (${sideLabels[r.side || 'legacy']})${noteText}\n`;
       });
     }
 
@@ -379,7 +371,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                 </span>
               </div>
               <p className="text-xs text-[#967e73]">
-                {wedding.couple.groom} & {wedding.couple.bride} · {wedding.dateText}
+                {wedding.couple.groom} & {wedding.couple.bride} · Thiệp nhà trai & nhà gái
               </p>
             </div>
           </div>
@@ -416,6 +408,15 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
         <div className="max-w-6xl mx-auto space-y-6">
 
 
+          {/* V9: lọc toàn bộ thống kê, lời chúc và RSVP theo phiên bản thiệp */}
+          <div className="bg-white border border-[#ddc8ba] rounded-2xl p-3 sm:p-4 flex flex-wrap gap-2 items-center" role="group" aria-label="Lọc theo bên mời">
+            <span className="text-xs font-semibold text-[#80545e] mr-2">Thiệp của:</span>
+            {(['all','groom','bride','legacy'] as const).map(value => <button key={value} type="button" onClick={()=>setSideFilter(value)}
+              className={`rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${sideFilter===value?'bg-[#702b3a] text-white shadow-sm':'bg-[#f6eee4] text-[#735052] hover:bg-[#ecd5c8]'}`}
+              aria-pressed={sideFilter===value}>{value==='all'?'Tất cả':sideLabels[value]}</button>)}
+            <span className="ml-auto text-xs text-[#997a76]">{sideFilter==='all' && stats ? stats.total_rsvps : sideRsvps.length} RSVP · {sideFilter==='all' && stats ? stats.total_wishes : sideWishes.length} lời chúc · {sideAttending.length} sẽ đến · {sideDeclined} báo vắng</span>
+          </div>
+
           {/* Tab Navigation */}
           <div className="flex items-center gap-2 border-b border-[#ddc8ba] pb-1">
             <button
@@ -446,7 +447,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
               <Users size={16} />
               <span>Danh Sách Khách Mời (RSVP)</span>
               <span className="px-2 py-0.5 text-[10px] font-medium bg-[#f6eee4] text-[#702b3a] rounded-full border border-[#ddc8ba]">
-                {rsvps.length}
+                {sideRsvps.length}
               </span>
             </button>
           </div>
@@ -460,9 +461,9 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                   {(['pending', 'approved', 'hidden', 'all'] as const).map(filter => {
                     const labelMap = {
                       pending: `Chờ duyệt (${pendingCount})`,
-                      approved: `Đã duyệt (${stats?.wishes_approved ?? 0})`,
-                      hidden: `Đã ẩn (${stats?.wishes_hidden ?? 0})`,
-                      all: `Tất cả (${stats?.total_wishes ?? 0})`,
+                      approved: `Đã duyệt (${sideWishes.filter(w=>w.status==='approved').length})`,
+                      hidden: `Đã ẩn (${sideWishes.filter(w=>w.status==='hidden').length})`,
+                      all: `Tất cả (${sideWishes.length})`,
                     };
                     return (
                       <button
@@ -515,6 +516,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div>
                               <h3 className="font-semibold text-sm text-[#702b3a]">{wish.guest_name}</h3>
+                              <span className="inline-block text-[10px] font-semibold text-[#8a5661] mt-1">{sideLabels[wish.side || 'legacy']}</span>
                               <time className="text-[11px] text-[#967e73]">
                                 {new Date(wish.created_at).toLocaleString('vi-VN')}
                               </time>
@@ -630,6 +632,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                       <thead className="bg-[#f6eee4] text-[#702b3a] uppercase tracking-wider font-semibold border-b border-[#ddc8ba]">
                         <tr>
                           <th className="py-3 px-4">Tên Khách Mời</th>
+                          <th className="py-3 px-4">Bên Mời</th>
                           <th className="py-3 px-4">Trạng Thái</th>
                           <th className="py-3 px-4">Số Khách</th>
                           <th className="py-3 px-4">Lời Nhắn / Ghi Chú</th>
@@ -646,6 +649,7 @@ export function AdminDashboard({ onClose }: AdminDashboardProps) {
                               <td className="py-3.5 px-4 font-semibold text-[#702b3a]">
                                 {r.guest_name}
                               </td>
+                              <td className="py-3.5 px-4 text-[#8a5661] whitespace-nowrap font-semibold">{sideLabels[r.side || 'legacy']}</td>
                               <td className="py-3.5 px-4">
                                 <span
                                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${

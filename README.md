@@ -1,3 +1,20 @@
+> **V9.2 — Việt hóa toàn bộ giao diện khách mời:** Opening, Hero, thiệp mời, các chapter, Gallery, lời chúc, RSVP, hộp quà, Footer và social metadata đều dùng câu chữ tiếng Việt. Giữ nguyên V9.1, admin, hai phiên bản thiệp và các API. Chi tiết: [`docs/V9_2_VIETNAMESE_COPY.md`](docs/V9_2_VIETNAMESE_COPY.md).
+
+> **V9.1 update — 22/10/2026:** Fixed two-envelope choreography on shared links and added a visible, compact mobile header switch (Thiệp nhà trai ↔ Thiệp nhà gái). See `docs/V9_1_ENVELOPE_SELECTION_FIX.md`. Admin and D1 migrations from V9 are unchanged.
+
+# V9 — Hai phiên bản thiệp, hai phong bì & Admin Side Filter
+
+**V9 được phát triển trực tiếp từ file `the-living-ribbon-animation-v8-3-update.zip` của chủ dự án.** Không thay Gallery, timeline, ảnh hay cơ chế duyệt lời chúc.
+
+- `/?side=groom`: thiệp nhà trai; `/?side=bride`: thiệp nhà gái.
+- `/`: chọn trong hai phong bì — chạm một lần để chọn và bắt đầu mở.
+- Nội dung riêng theo bên: `src/wedding.config.ts` → `invitations.groom` / `.bride`.
+- Admin `/admin`: lọc Nhà trai / Nhà gái / Chưa phân loại, duyệt lời chúc theo bên và xuất CSV theo lọc.
+- **Triển khai lên DB cũ: chạy migration** `migrations/001_add_invitation_side.sql` **trước** khi deploy V9.
+- Xem hướng dẫn đầy đủ trong **`docs/V9_TWO_INVITATIONS_AND_ADMIN.md`**.
+
+---
+
 > **Phiên bản V8 (21/10/2026):** Gallery desktop collage Polaroid / mobile stacked photos, căn ngày 14, tinh chỉnh khoảng cách, RSVP hai tab đơn giản và popup animation. Xem [V8 change log](docs/V8_GALLERY_RSVP_SPACING_CHANGELOG.md). Giữ nguyên Admin Dashboard từ bản V7 của người dùng.
 
 > **CẬP NHẬT V7:** Đây là bản xây dựng trực tiếp trên `the-living-ribbon-animation-v6-1-update.zip` do bạn cung cấp; giữ trang admin đã thêm. Xem `docs/V7_INVITATION_ADMIN_CHANGELOG.md` để biết cấu trúc thiệp cưới mới, animation Two Halves / One Heart, RSVP pill và modal viết lời chúc.
