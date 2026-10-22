@@ -4074,3 +4074,255 @@ a.footer-replay:hover { color: #fff0e8; text-decoration: underline; }
   .formal-invitation .calendar-ornament .calendar-weekday {flex-basis:104px;}
   .formal-invitation .calendar-ornament .calendar-month {flex-basis:66px;}
 }
+
+/* =======================================================================
+   V9.3 — CHUYỂN CẢNH & HERO THEO MOCKUP ĐÃ DUYỆT
+   1. Phong bì được chọn tự mở trước khi tan vào phong bì lớn.
+   2. Opening chỉ mờ đi KHI hoàn tất, không dùng 2 fade animations đồng thời.
+   3. Mobile/tablet: ưu tiên ảnh thật, tên đặt trên phần giấy kem bên dưới.
+   ======================================================================= */
+.opening-phase-journey {
+  /* V9.2 dùng CSS keyframe làm cả màn hình biến mất trước khi React kết thúc
+     scene. Trong V9.3, AnimatePresence là nguồn điều khiển fade duy nhất. */
+  animation: none !important;
+}
+.opening-chooser-stage .opening-envelope-choice {
+  transition: border-color .64s ease, background-color .64s ease, box-shadow .64s ease;
+}
+.opening-choice-paper,
+.opening-choice-flap,
+.opening-choice-seal,
+.opening-choice-label,
+.opening-choice-sub {
+  transition: transform .72s cubic-bezier(.22,1,.36,1), opacity .58s ease;
+}
+.opening-choice-letter {
+  position:absolute;
+  left:0; right:0; top:15%;
+  font:italic 400 clamp(8px,1.5vw,11px)/1.3 var(--serif);
+  letter-spacing:-.035em;
+  color:#843b4d;
+  white-space:nowrap;
+}
+.opening-phase-unseal .opening-envelope-selected,
+.opening-phase-handoff .opening-envelope-selected {
+  background:transparent;
+  border-color:transparent;
+  box-shadow:none;
+}
+.opening-phase-unseal .opening-envelope-selected .opening-choice-seal,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-seal {
+  opacity:0;
+  transform:translate(-50%,-135%) rotate(27deg) scale(1.22);
+}
+.opening-phase-unseal .opening-envelope-selected .opening-choice-flap,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-flap {
+  transform-origin:50% 18%;
+  transform:rotateX(165deg);
+  opacity:.35;
+}
+.opening-phase-unseal .opening-envelope-selected .opening-choice-paper,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-paper {
+  transform:translateY(-30%) rotate(-1deg);
+}
+.opening-phase-unseal .opening-envelope-selected .opening-choice-label,
+.opening-phase-unseal .opening-envelope-selected .opening-choice-sub,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-label,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-sub {
+  opacity:0;
+  transform:translateY(10px);
+}
+.opening-phase-handoff .opening-choice-envelope {filter:drop-shadow(0 15px 22px rgba(103,66,55,.1));}
+/* Kicker riêng trên ảnh, chỉ xuất hiện khi mobile/tablet có layout hai tầng. */
+.hero-photo-kicker { display:none; }
+
+@media (max-width:920px) {
+  .hero-section {
+    height:auto;
+    min-height:0;
+    max-height:none;
+    overflow:hidden;
+    background:#f9f1e8;
+  }
+  .hero-canvas {
+    height:auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    padding:0;
+  }
+  .hero-photo-wrap {
+    position:relative;
+    left:auto;right:auto;top:auto;bottom:auto;
+    flex:none;
+    width:100%;
+    height:clamp(520px,80svh,790px);
+    border:0;border-radius:0;
+    box-shadow:none;
+    overflow:hidden;
+    z-index:1;
+  }
+  .hero-photo {width:100%;height:100%;object-fit:cover;filter:none;}
+  .hero-photo-veil {
+    background:linear-gradient(180deg,rgba(33,24,27,.3),transparent 28%,transparent 78%,rgba(45,28,27,.06));
+  }
+  .hero-photo-kicker {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:9px;
+    position:absolute;
+    z-index:3;
+    top:clamp(150px,18svh,195px);
+    left:12%;right:12%;
+    color:#fff8ed;
+    text-shadow:0 2px 10px #34242a99;
+    font-size:clamp(9px,1.9vw,12px);
+    letter-spacing:.28em;
+    text-align:center;
+    pointer-events:none;
+  }
+  .hero-photo-kicker span {font:italic 18px/1 var(--serif);color:#ffdfdd;}
+  .hero-content {
+    position:relative;
+    z-index:5;
+    top:auto;bottom:auto;left:auto;right:auto;
+    width:100%;
+    margin:-30px auto 0;
+    padding:48px 18px 108px;
+    border-radius:49% 49% 0 0 / 28px 28px 0 0;
+    background:linear-gradient(180deg,#fcf5ec 0%,#f7ede3 100%);
+    border-top:1px solid rgba(169,107,112,.5);
+    box-shadow:0 -8px 30px rgba(47,26,25,.06);
+    color:#7c3549;
+    text-align:center;
+    transform:none;
+  }
+  .hero-content .hero-kicker {display:none;}
+  .hero-names {
+    display:flex;
+    flex-flow:row nowrap;
+    justify-content:center;
+    align-items:baseline;
+    gap:clamp(3px,1.2vw,13px);
+    width:100%;
+    margin:0 auto 14px;
+    font-size:clamp(45px,10.3vw,94px);
+    line-height:1.2;
+    letter-spacing:-.045em;
+    color:#81364a;
+    text-shadow:none;
+  }
+  .hero-names span {display:block;white-space:nowrap;}
+  .hero-names em {
+    font-size:.64em;
+    line-height:1;
+    margin:0;
+    color:#b78288;
+    text-shadow:none;
+    flex-shrink:0;
+  }
+  .hero-date {
+    font:400 clamp(12px,2.4vw,18px)/1.4 var(--serif);
+    letter-spacing:.28em;
+    color:#9e6b69;
+  }
+  .hero-divider {margin:20px auto 18px;background:#ad7a76;}
+  .hero-subtitle {
+    color:#986b65;
+    font-family:var(--serif);
+    font-size:clamp(14px,2.45vw,19px);
+    line-height:1.45;
+    letter-spacing:.025em;
+  }
+  .guest-personalization {color:#8a5761;margin-top:16px;}
+  .hero-scroll {
+    z-index:6;
+    left:50%;bottom:24px;
+    transform:translateX(-50%);
+    color:#925960;
+  }
+  .hero-scroll svg {border-color:#c59a91;}
+  .hero-stamp {
+    z-index:4;
+    top:clamp(200px,24svh,265px);
+    right:5%;bottom:auto;
+    color:#fff6ee;
+    border-color:rgba(255,247,236,.65);
+  }
+  .hero-ribbon-back {opacity:.045;}
+}
+@media(max-width:380px) {
+  .hero-photo-wrap {height:clamp(455px,75svh,675px);}
+  .hero-photo-kicker {top:clamp(137px,18svh,162px);letter-spacing:.16em;}
+  .hero-stamp {top:clamp(187px,23svh,225px);right:12px;}
+  .hero-content {padding-inline:11px;padding-top:40px;}
+  .hero-names {font-size:clamp(41px,10.1vw,51px);gap:3px;}
+  .hero-date {letter-spacing:.2em;}
+}
+/* Scroll reveal applies to the complete mobile photo stack. Motion controls
+   the outer wrapper and individual front-card animations remain independent. */
+@media (prefers-reduced-motion:reduce) {
+  .opening-choice-paper,.opening-choice-flap,.opening-choice-seal,
+  .opening-choice-label,.opening-choice-sub {transition:none!important;}
+}
+
+/* ================================================================
+   V9.4 — single envelope handoff; no double opening; mobile photo-first.
+   Keep these overrides at the end to supersede historical V3/V9 rules.
+   ================================================================ */
+/* A chosen MINI envelope never opens. It only moves to the large envelope,
+   crossfades while both are still sealed, then LARGE envelope opens once. */
+.opening-phase-unseal .opening-envelope-selected .opening-choice-seal,
+.opening-phase-unseal .opening-envelope-selected .opening-choice-flap,
+.opening-phase-unseal .opening-envelope-selected .opening-choice-paper {transform:none;opacity:1;}
+.opening-phase-handoff .opening-envelope-selected .opening-choice-seal,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-flap,
+.opening-phase-handoff .opening-envelope-selected .opening-choice-paper {transition:none;transform:none;opacity:1;}
+.opening-chooser-stage .opening-envelope-choice {backface-visibility:hidden;}
+.opening-chooser-stage .opening-choice-paper { background:linear-gradient(140deg,#fff9f2,#f1e5d8); }
+.opening-choice-letter {display:none!important;}
+.opening-phase-journey, .opening-phase-journey .opening-content {
+  /* React AnimatePresence is the only full-screen fade to Hero. */
+  animation:none!important;
+}
+.opening-screen {transform:translateZ(0);}
+/* Neutral stationary backing sheets; don't display another photo before its turn. */
+.gallery-stack-under {
+  background:linear-gradient(145deg,#fffaf1 0%,#e9d8ca 100%);
+  box-shadow:0 11px 30px rgba(77,43,44,.16);
+}
+.gallery-stack-under::after {
+  content:'♡';display:grid;place-items:center;width:100%;height:100%;
+  color:rgba(132,70,83,.18);font:italic 62px/1 Georgia,serif;
+}
+/* Both photo text and portraits need their own uninterrupted visual zones. */
+@media (max-width:920px) {
+  .hero-section {background:#f8efe5;}
+  .hero-photo-kicker {
+    top:clamp(146px,17svh,177px)!important;
+    left:8%;right:8%;gap:4px;
+    font-size:clamp(10px,2.35vw,13px)!important;
+    letter-spacing:clamp(.12em,.5vw,.25em)!important;
+    text-shadow:0 2px 8px rgba(28,22,22,.48);
+  }
+  .hero-photo-kicker span {font-size:14px;}
+  .hero-stamp {
+    top:clamp(180px,20svh,226px)!important;
+    right:clamp(10px,2.5vw,25px)!important;
+    transform:scale(.83);transform-origin:top right;
+  }
+  .hero-content {
+    background:linear-gradient(180deg,#fbf2e9,#f6e9e0);
+    border-top:1px solid rgba(174,119,120,.47);
+  }
+}
+@media (max-width:380px) {
+  .hero-photo-kicker {top:clamp(146px,17svh,165px)!important;}
+  .hero-stamp {top:clamp(178px,23svh,205px)!important;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening-screen,.opening-content,.opening-chooser-stage {animation:none!important;}
+  .gallery-stack-front {transition:none!important;}
+}

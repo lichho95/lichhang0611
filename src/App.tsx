@@ -103,16 +103,21 @@ function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { on
   const begin = (picked?: InvitationSide) => {
     if (phase !== 'sealed' || (startsWithChooser && !picked)) return;
     if (picked) {
-      const rect = choiceRefs.current[picked]?.getBoundingClientRect();
-      if (rect) {
-        // Measure the destination envelope even while it is visually hidden.
-        // This avoids jumping vertically during the card-to-envelope cross-fade.
+      const button = choiceRefs.current[picked];
+      const rect = button?.getBoundingClientRect();
+      const smallEnvelope = button?.querySelector<HTMLElement>('.opening-choice-envelope')?.getBoundingClientRect();
+      if (rect && smallEnvelope) {
+        // Đo riêng phong bì, không dùng cả card có label bên dưới. Khi scale
+        // quanh tâm button, bù offset tâm phong bì để khớp với phong bì lớn.
         const destination = document.querySelector<HTMLElement>('.opening-content .envelope-art')?.getBoundingClientRect();
-        setFocusX((destination ? destination.left + destination.width / 2 : window.innerWidth / 2) - (rect.left + rect.width / 2));
-        if (destination) {
-          setFocusY(destination.top + destination.height / 2 - (rect.top + rect.height / 2));
-          setFocusScale(Math.min(1.46, Math.max(1.07, destination.width / rect.width * .92)));
-        }
+        const factor = destination ? Math.min(2.26, Math.max(1.05, destination.width / smallEnvelope.width * .95)) : 1.15;
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const envelopeOffsetX = smallEnvelope.left + smallEnvelope.width / 2 - centerX;
+        const envelopeOffsetY = smallEnvelope.top + smallEnvelope.height / 2 - centerY;
+        setFocusX((destination ? destination.left + destination.width / 2 : window.innerWidth / 2) - centerX - envelopeOffsetX * factor);
+        setFocusY((destination ? destination.top + destination.height / 2 : window.innerHeight / 2) - centerY - envelopeOffsetY * factor);
+        setFocusScale(factor);
       }
       setChosen(picked);
       onSelect(picked);
@@ -123,12 +128,14 @@ function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { on
     if (startsWithChooser) {
       // Both cards STAY mounted while the chosen card moves to the centre.
       setPhase('focus');
-      schedule(() => setPhase('handoff'), 950);
-      // Cross-fade selected little envelope to the large, full-detail envelope.
-      schedule(() => setPhase('unseal'), 1430);
-      schedule(() => setPhase('unfold'), 1900);
-      schedule(() => { setPhase('journey'); onReveal(); }, 2660);
-      schedule(onEnter, 3670);
+      // Một lần mở duy nhất: phong bì NHỎ chỉ di chuyển, không bung dấu sáp.
+      // Handoff hòa sang phong bì lớn vẫn đang ĐÓNG; chỉ phong bì LỚN mới mở.
+      // Không remount cả trang / không cho 2 animation mở lặp nhau.
+      schedule(() => setPhase('handoff'), 780);
+      schedule(() => setPhase('unseal'), 1510);
+      schedule(() => setPhase('unfold'), 1950);
+      schedule(() => { setPhase('journey'); onReveal(); }, 2850);
+      schedule(onEnter, 4090);
     } else {
       setPhase('unseal');
       schedule(() => setPhase('unfold'), 460);
@@ -137,10 +144,12 @@ function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { on
     }
   };
   const isChoosing = startsWithChooser && ['sealed', 'focus', 'handoff'].includes(phase);
-  const mainVisible = !startsWithChooser || phase === 'handoff' || ['unseal', 'unfold', 'journey'].includes(phase);
+  const mainVisible = !startsWithChooser || ['handoff', 'unseal', 'unfold', 'journey'].includes(phase);
   const isOpening = ['unseal', 'unfold', 'journey'].includes(phase);
+  // Link chung: lời mời chỉ hiện trên LÁ THƯ khi mở; không có heading thứ hai.
+  const showLetterCopy = !startsWithChooser;
   return <motion.div className={`opening-screen opening-phase-${phase} ${startsWithChooser ? 'opening-has-chooser' : ''}`}
-    initial={{ opacity: 1 }} exit={{ opacity: 0, pointerEvents: 'none' }} transition={{ duration: .24 }}>
+    initial={{ opacity: 1 }} exit={{ opacity: 0, pointerEvents: 'none' }} transition={{ duration: reduced ? .12 : .76, ease }}>
     <div className="opening-background"/><Floral position="left"/><Floral position="right"/>
     <svg className="opening-silk-trail" viewBox="0 0 900 650" preserveAspectRatio="none" aria-hidden="true">
       <defs><linearGradient id="opening-silk-grad"><stop stopColor="#c98b8d"/><stop offset=".45" stopColor="#6f2d3c"/><stop offset="1" stopColor="#c98b8d"/></linearGradient></defs>
@@ -151,12 +160,15 @@ function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { on
     <motion.div className="opening-content"
       initial={startsWithChooser ? false : {opacity:0,y:24}}
       animate={{opacity:mainVisible?1:0,y:mainVisible?0:16}}
-      transition={{duration: startsWithChooser ? .45 : .8, ease}}
+      transition={{duration: startsWithChooser ? .68 : .8, ease}}
       style={{pointerEvents:mainVisible?'auto':'none'}} aria-hidden={!mainVisible}>
       <div className="eyebrow">NIỀM VUI CỦA HAI GIA ĐÌNH</div>
       <div className="opening-monogram">{wedding.couple.initials}</div>
       <EnvelopeArt opened={isOpening} dateText={wedding.invitations[side || chosen || 'groom'].dateText} />
-      <div className="opening-copy">
+      {!startsWithChooser && <motion.div className="opening-copy" initial={false}
+        animate={{opacity:showLetterCopy?1:0,y:showLetterCopy?0:16}}
+        transition={{duration:startsWithChooser?.72:.45,ease}}
+        style={{pointerEvents:showLetterCopy?'auto':'none'}}>
         <p className="invitation-script">Trân trọng kính mời</p>
         <p className="opening-text">{guestName ? `Thân mời ${guestName}` : wedding.greeting}</p>
         <button className="button button-primary opening-button" onClick={()=>begin()} disabled={phase!=='sealed'||startsWithChooser} tabIndex={startsWithChooser?-1:0}
@@ -164,12 +176,12 @@ function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { on
           {phase==='sealed'?'Mở thiệp cưới':'Chuyện mình bắt đầu...'} <ArrowRight size={16}/>
         </button>
         <p className="opening-hint">{phase==='sealed'?'CHẠM ĐỂ BẮT ĐẦU CÂU CHUYỆN':'DẢI LỤA DẪN LỐI YÊU THƯƠNG'}</p>
-      </div>
+      </motion.div>}
     </motion.div>
-    <AnimatePresence>
+    <>
       {isChoosing && <motion.div className="opening-chooser-stage" key="chooser"
         initial={false} animate={{opacity:phase==='handoff'?0:1}}
-        exit={{opacity:0}} transition={{duration:.43,ease}} style={{pointerEvents:phase==='sealed'?'auto':'none'}}>
+        exit={{opacity:0}} transition={{duration:.68,ease}} style={{pointerEvents:phase==='sealed'?'auto':'none'}}>
         <div className="opening-chooser-content">
           <motion.div className="opening-chooser-heading"
             animate={{opacity:phase==='sealed'?1:0,y:phase==='sealed'?0:-18}}
@@ -210,7 +222,7 @@ function Opening({ onEnter, onReveal, onBegin, onSelect, side, guestName }: { on
           </motion.p>
         </div>
       </motion.div>}
-    </AnimatePresence>
+    </>
     <span className="opening-side-note">MỘT CHUYỆN TÌNH ĐƯỢC VIẾT BẰNG YÊU THƯƠNG · {wedding.invitations[side || chosen || 'groom'].dateText.slice(-4)}</span>
   </motion.div>;
 }
@@ -253,15 +265,30 @@ function Hero({ guestName, active, side }: { guestName: string; active: boolean;
   const invitation = wedding.invitations[side];
   const heroRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
+  // Hero mobile/tablet hai tầng: ảnh được ưu tiên, khối tên tách xuống phía dưới.
+  const [compactHero, setCompactHero] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 920px)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 920px)');
+    const update = () => setCompactHero(query.matches);
+    update(); query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const imageY = useTransform(scrollYProgress, [0,1], ['0%', reduced ? '0%' : '13%']);
   const imageScale = useTransform(scrollYProgress, [0,1], [1, reduced ? 1 : 1.08]);
   return <section id="home" className="hero-section" ref={heroRef}>
     <div className="hero-canvas"><div className="hero-pattern"/><div className="hero-ribbon-back"/>
-      <motion.div className="hero-photo-wrap" style={{ y: imageY, scale: imageScale }} initial={false} animate={{ opacity: 1 }} transition={{ duration: .3, ease }}>
-        <ImageFrame src={wedding.image.hero} alt="Ảnh cưới của cô dâu và chú rể" className="hero-photo" loading="eager"/>
+      <motion.div className="hero-photo-wrap" style={{ y: compactHero ? '0%' : imageY, scale: compactHero ? 1 : imageScale }} initial={false}>
+        {/* HERO MOBILE/TABLET: ảnh nguyên bản nên tối thiểu 1200 × 1600px (3:4).
+            Chỉnh heroPositionMobile/heroPositionDesktop ở wedding.config.ts để tránh cắt gương mặt. */}
+        <img src={wedding.image.hero} alt="Ảnh cưới của cô dâu và chú rể" className="hero-photo"
+          style={{objectPosition:compactHero?wedding.image.heroPositionMobile:wedding.image.heroPositionDesktop}}
+          loading="eager" decoding="async" fetchPriority="high" />
         <div className="hero-photo-veil"/>
       </motion.div>
+      <motion.div className="hero-photo-kicker" aria-hidden="true"
+        initial={false} animate={{opacity:active?1:0,y:active?0:12}}
+        transition={{duration:.75,ease}}>NGÀY HẠNH PHÚC CỦA <span>♡</span></motion.div>
       <div className="hero-content">
         <motion.span initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 26 }} transition={{ duration: .65, ease }} className="eyebrow hero-kicker">NGÀY HẠNH PHÚC CỦA</motion.span>
         <motion.h1 initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 48, scale: active ? 1 : .965 }} transition={{ duration: .82, ease }} className="hero-names"><span>{wedding.couple.groom}</span><em>&</em><span>{wedding.couple.bride}</span></motion.h1>
@@ -370,7 +397,15 @@ function GallerySection({ onPhotoOpen, onVideoOpen, side }: { onPhotoOpen: (inde
   const swipeHandled = useRef(false);
   const length = wedding.gallery.length;
   const showNext = (direction: number) => setStackIndex(i => (i + direction + length) % length);
-  const backPhoto = (offset: number) => wedding.gallery[(stackIndex + offset) % length];
+  // Các tờ giấy bên dưới CHỈ để trang trí; không thể lộ ảnh số 3 khi chuyển 1 → 2.
+  // Mỗi lần Next / Previous chỉ có một ảnh chính xuất hiện trong DOM.
+  useEffect(() => {
+    if (length < 2) return;
+    [1, -1].forEach(delta => {
+      const image = new Image();
+      image.src = wedding.gallery[(stackIndex + delta + length) % length].src;
+    });
+  }, [stackIndex, length]);
   return <section id="gallery" className="gallery-section section-pad"><div className="container"><FragmentsHeading/>
     {/* DESKTOP: scrapbook collage inspired by overlapping Polaroid prints.
         Ảnh: ưu tiên WebP 1200x1600 px (3:4); vài ảnh ngang 1600x1200 px (4:3).
@@ -395,23 +430,26 @@ function GallerySection({ onPhotoOpen, onVideoOpen, side }: { onPhotoOpen: (inde
     </div>
     {/* MOBILE: một chồng ảnh Polaroid. Vuốt để chuyển ảnh trên cùng; chạm mở lightbox.
         Ảnh tham khảo: 900x1200px hoặc 1200x1600px, tỷ lệ 3:4. */}
-    <div className="gallery-mobile-stack" aria-label="Chồng ảnh kỷ niệm">
-      {length>1 && <div className="gallery-stack-under gallery-stack-under-far" aria-hidden="true"><ImageFrame src={backPhoto(2).src} alt=""/></div>}
-      {length>1 && <div className="gallery-stack-under gallery-stack-under-near" aria-hidden="true"><ImageFrame src={backPhoto(1).src} alt=""/></div>}
+    <motion.div className="gallery-mobile-stack" aria-label="Chồng ảnh kỷ niệm"
+      initial={reduced?{opacity:0}:{opacity:0,y:46,scale:.95,rotate:-3}}
+      whileInView={{opacity:1,y:0,scale:1,rotate:0}}
+      viewport={{once:true,amount:.18}}
+      transition={reduced?{duration:.12}:{type:'spring',stiffness:105,damping:21,delay:.1}}>
+      {length>1 && <div className="gallery-stack-under gallery-stack-under-far" aria-hidden="true"/>}
+      {length>1 && <div className="gallery-stack-under gallery-stack-under-near" aria-hidden="true"/>}
       <div className="gallery-stack-active" onTouchStart={e=>{swipeHandled.current=false;swipeStart.current=e.changedTouches[0].clientX;}} onTouchEnd={e=>{if(swipeStart.current===null)return;const dx=e.changedTouches[0].clientX-swipeStart.current;swipeStart.current=null;if(Math.abs(dx)>45){swipeHandled.current=true;showNext(dx<0?1:-1);}}}>
-        <AnimatePresence mode="wait"><motion.button key={stackIndex} type="button" className="gallery-stack-front" onClick={()=>{if(swipeHandled.current){swipeHandled.current=false;return;}onPhotoOpen(stackIndex);}} aria-label={`Xem ảnh ${stackIndex+1}: ${wedding.gallery[stackIndex].alt}`}
-          initial={reduced?{opacity:0}:{opacity:0,x:36,rotate:5,scale:.96}}
-          animate={{opacity:1,x:0,rotate:-2,scale:1}}
-          exit={reduced?{opacity:0}:{opacity:0,x:-30,rotate:-8,scale:.95}}
-          transition={{duration:reduced?.12:.42,ease}}>
+        <motion.button key={stackIndex} type="button" className="gallery-stack-front" onClick={()=>{if(swipeHandled.current){swipeHandled.current=false;return;}onPhotoOpen(stackIndex);}} aria-label={`Xem ảnh ${stackIndex+1}: ${wedding.gallery[stackIndex].alt}`}
+          initial={reduced ? false : {opacity:.68,scale:.985}}
+          animate={{opacity:1,scale:1}}
+          transition={{duration:reduced ? 0 : .22,ease}}>
           <ImageFrame src={wedding.gallery[stackIndex].src} alt={wedding.gallery[stackIndex].alt}/>
           <span>BÊN NHAU TỪ ĐÂY</span>
-        </motion.button></AnimatePresence>
+        </motion.button>
         <span className="gallery-stack-flower" aria-hidden="true">✿</span>
       </div>
       <div className="gallery-stack-switcher"><button type="button" onClick={()=>showNext(-1)} aria-label="Ảnh trước"><ArrowLeft size={20}/></button><span>{String(stackIndex+1).padStart(2,'0')} / {String(length).padStart(2,'0')}</span><button type="button" onClick={()=>showNext(1)} aria-label="Ảnh tiếp theo"><ArrowRight size={20}/></button></div>
       <p className="gallery-stack-hint">Vuốt để xem ảnh · Chạm để phóng to</p>
-    </div>
+    </motion.div>
     <div className="gallery-actions"><span className="gallery-caption">✦ GIỮ LẠI NHỮNG NGÀY THẬT ĐẸP ✦</span><button className="button button-primary gallery-view-all" onClick={() => onPhotoOpen(0)}>Xem toàn bộ album ảnh <ArrowUpRight size={16}/></button>{wedding.videoEmbedUrl && <button className="button button-outline" onClick={onVideoOpen}><Play size={16}/> Xem video cưới</button>}</div>
   </div></section>;
 }
@@ -428,7 +466,7 @@ function Lightbox({ index, onClose, setIndex }: { index: number; onClose: () => 
     return () => { window.removeEventListener('keydown',key); document.body.style.overflow=''; };
   },[onClose,previous,next]);
   const photo = wedding.gallery[index];
-  return <motion.div className="lightbox-backdrop" role="dialog" aria-modal="true" aria-label="Xem album ảnh cưới" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}><button className="lightbox-close" aria-label="Đóng album" onClick={onClose}><X size={24}/></button><div className="lightbox-body" onClick={e=>e.stopPropagation()} onTouchStart={e=>{startX.current=e.changedTouches[0].clientX;}} onTouchEnd={e=>{if(startX.current===null)return;const delta=e.changedTouches[0].clientX-startX.current;if(Math.abs(delta)>45){delta>0?previous():next();}startX.current=null;}}><AnimatePresence mode="wait"><motion.img key={photo.src} className="lightbox-image" src={photo.src} alt={photo.alt} initial={reduced?{opacity:0}:{opacity:0,scale:.97,y:12}} animate={{opacity:1,scale:1,y:0}} exit={reduced?{opacity:0}:{opacity:0,scale:1.015,y:-7}} transition={reduced?{duration:.12}:{duration:.36,ease}}/></AnimatePresence><div className="lightbox-bottom"><button aria-label="Ảnh trước" onClick={previous}><ArrowLeft size={23}/></button><span>{String(index+1).padStart(2,'0')} — {String(total).padStart(2,'0')}</span><button aria-label="Ảnh sau" onClick={next}><ArrowRight size={23}/></button></div></div></motion.div>;
+  return <motion.div className="lightbox-backdrop" role="dialog" aria-modal="true" aria-label="Xem album ảnh cưới" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}><button className="lightbox-close" aria-label="Đóng album" onClick={onClose}><X size={24}/></button><div className="lightbox-body" onClick={e=>e.stopPropagation()} onTouchStart={e=>{startX.current=e.changedTouches[0].clientX;}} onTouchEnd={e=>{if(startX.current===null)return;const delta=e.changedTouches[0].clientX-startX.current;if(Math.abs(delta)>45){delta>0?previous():next();}startX.current=null;}}><motion.img key={photo.src} className="lightbox-image" src={photo.src} alt={photo.alt} initial={reduced?{opacity:0}:{opacity:0,scale:.97,y:12}} animate={{opacity:1,scale:1,y:0}} transition={reduced?{duration:0}:{duration:.2,ease}}/><div className="lightbox-bottom"><button aria-label="Ảnh trước" onClick={previous}><ArrowLeft size={23}/></button><span>{String(index+1).padStart(2,'0')} — {String(total).padStart(2,'0')}</span><button aria-label="Ảnh sau" onClick={next}><ArrowRight size={23}/></button></div></div></motion.div>;
 }
 function WishesSection({ guestName, side, showToast }: { guestName: string; side: InvitationSide; showToast: (message: string, type?: 'success' | 'error' | 'info', title?: string) => void }) {
   const [wishes, setWishes] = useState<Wish[]>([]);
@@ -608,6 +646,7 @@ export default function App() {
   const [guestName] = useState(getGuestName);
   const [opened,setOpened]=useState(()=>!wedding.sections.opening);
   const [heroRevealed,setHeroRevealed]=useState(()=>!wedding.sections.opening);
+  const [openingExitDone,setOpeningExitDone]=useState(()=>!wedding.sections.opening);
   // Tăng mỗi lần xem lại để tất cả Motion components được mount mới, reset once:true/useInView.
   const [animationCycle, setAnimationCycle] = useState(0);
   const [playing,setPlaying]=useState(false);
@@ -659,7 +698,16 @@ export default function App() {
     stepViewport: wedding.effects.autoScrollStepViewport,
   });
   const audioRef=useRef<HTMLAudioElement>(null);
-  useEffect(()=>{if(!opened){window.scrollTo({top:0,behavior:'auto'});document.body.style.overflow='hidden';return()=>{document.body.style.overflow='';};}},[opened]);
+  useEffect(() => {
+    // Không thả body scroll cho đến khi lớp Opening tan hẳn; tránh nháy do
+    // scrollbar xuất hiện giữa transition trên iOS/Chrome.
+    if (!opened || !openingExitDone) {
+      window.scrollTo({top:0,left:0,behavior:'instant'});
+      document.body.style.overflow='hidden';
+      return () => {document.body.style.overflow='';};
+    }
+    document.body.style.overflow='';
+  },[opened,openingExitDone]);
   const chooseSide = (chosen: InvitationSide) => {
     setSide(chosen);
     setInvitationUrlSide(chosen);
@@ -678,6 +726,7 @@ export default function App() {
     // Trở về đầu ngay trước khi render lại, tránh useInView kích hoạt ở scroll cũ.
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     setHeroRevealed(false);
+    setOpeningExitDone(false);
     setOpened(false);
     setRsvpOpen(false);
     setRsvpVisible(false);
@@ -693,10 +742,10 @@ export default function App() {
     }
   };
   return <>
-    <AnimatePresence>{!opened && <Opening side={side} onSelect={chooseSide} onBegin={()=>{void beginMusic();}} onReveal={()=>setHeroRevealed(true)} onEnter={enter} guestName={guestName}/>}</AnimatePresence>
+    <AnimatePresence onExitComplete={()=>setOpeningExitDone(true)}>{!opened && <Opening side={side} onSelect={chooseSide} onBegin={()=>{void beginMusic();}} onReveal={()=>setHeroRevealed(true)} onEnter={enter} guestName={guestName}/>}</AnimatePresence>
     {wedding.musicUrl && <audio ref={audioRef} src={wedding.musicUrl} loop preload="none" onEnded={()=>setPlaying(false)} />}
     <Header opened={opened} side={side} onSwitchSide={switchSide} onRSVP={()=>setRsvpOpen(true)}/>
-    <HeartRain visible={opened && wedding.effects.heartRain} />
+    <HeartRain visible={opened && openingExitDone && wedding.effects.heartRain} />
     {wedding.isDemo && opened && <div className="demo-ribbon">BẢN XEM TRƯỚC — HÃY THAY DỮ LIỆU TẠI <code>wedding.config.ts</code></div>}
     <main key={animationCycle}>
       <Hero guestName={guestName} active={heroRevealed} side={activeSide}/>
@@ -707,7 +756,7 @@ export default function App() {
       {wedding.sections.gift && <><JourneyTransition number="04" title="Một chút yêu thương" motif="bow"/><GiftSection/></>}
     </main>
     <Footer onReplay={replayStory} side={activeSide}/>
-    {opened && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
+    {opened && openingExitDone && <MusicControl playing={playing} setPlaying={setPlaying} audioRef={audioRef}/>}
     <AnimatePresence>
       {opened && wedding.sections.rsvp && rsvpVisible && !rsvpOpen &&
         <motion.div className="floating-rsvp-dock"

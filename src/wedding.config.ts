@@ -29,9 +29,14 @@ export const wedding = {
     // LƯU Ý: Ảnh DEMO hiện có được cắt từ mockup và không đủ nét để dùng chính thức.
     // Thay bằng ảnh gốc sắc nét trước khi gửi thiệp; CSS không còn cố tình làm mờ ảnh.
     // ẢNH HERO: chân dung 1200×1600 px (3:4) hoặc lớn hơn, ưu tiên WebP < 400 KB.
-    hero: '/images/hero-preview.webp',
+    hero: '/images/hero-preview.jpeg',
+    // VỊ TRÍ ẢNH HERO: chỉnh trọng tâm sau khi thay ảnh thật, không cần sửa CSS.
+    // Mobile & tablet 320–920px: "center 28%" giữ khuôn mặt trong vùng ảnh chính.
+    // Desktop: "center 36%". Có thể thử "center top" nếu ảnh rất cao.
+    heroPositionMobile: 'center 28%',
+    heroPositionDesktop: 'center 36%',
     // ẢNH CẶP ĐÔI: dọc 1000×1400 px (5:7), WebP < 350 KB.
-    couple: '/images/couple-preview.webp',
+    couple: '/images/couple-preview.jpeg',
   },
   story: [
     {
@@ -94,11 +99,11 @@ export const wedding = {
   // ẢNH GALLERY: 900×1200 px (3:4) hoặc 1200×900 px (4:3), WebP ~100–300 KB/tấm.
   // Có thể thêm/bớt ảnh; tỷ lệ gốc sẽ được giao diện sắp xếp linh hoạt.
   gallery: [
-    { src: '/images/gallery-1.webp', alt: 'Một khoảnh khắc bên nhau' },
-    { src: '/images/gallery-2.webp', alt: 'Nụ cười thật dịu dàng' },
-    { src: '/images/gallery-3.webp', alt: 'Khoảnh khắc đáng nhớ' },
-    { src: '/images/gallery-4.webp', alt: 'Mình đi cùng nhau nhé' },
-    { src: '/images/gallery-5.webp', alt: 'Một ngày nắng đẹp' },
+    { src: '/images/gallery-1.jpeg', alt: 'Một khoảnh khắc bên nhau' },
+    { src: '/images/gallery-2.jpeg', alt: 'Nụ cười thật dịu dàng' },
+    { src: '/images/gallery-3.jpg', alt: 'Khoảnh khắc đáng nhớ' },
+    { src: '/images/gallery-4.jpg', alt: 'Mình đi cùng nhau nhé' },
+    { src: '/images/gallery-5.jpg', alt: 'Một ngày nắng đẹp' },
     { src: '/images/gallery-6.webp', alt: 'Ngày chung đôi' },
   ],
   // Để trống cho đến khi có STK THẬT. Không tự tạo QR từ số tài khoản chưa xác nhận.
