@@ -4,7 +4,7 @@
  * Xem docs/IMAGE_GUIDE.md để biết kích thước, vị trí cắt, cách thay ảnh.
  */
 export const wedding = {
-  isDemo: true,
+  isDemo: false,
   couple: {
     groom: 'Lịch',
     bride: 'Hằng',
@@ -41,27 +41,27 @@ export const wedding = {
   story: [
     {
       id: 'first-meet',
-      date: 'Mùa thu 2022',
+      date: 'Mùa thu 2021',
       title: 'Ngày ta gặp nhau',
       text: 'Chỉ là một cuộc gặp tình cờ, nhưng lại mở đầu cho một câu chuyện dài.',
       // ẢNH TIMELINE 01: 900×1100 px (4:5), < 250 KB.
-      image: '/images/story-1.webp',
+      image: '/images/story-1.jpg',
     },
     {
       id: 'little-things',
-      date: 'Mùa hè 2024',
+      date: 'Mùa hè 2023',
       title: 'Những điều bé nhỏ',
       text: 'Tình yêu lớn lên từ những buổi chiều giản dị và những lời hỏi han.',
       // ẢNH TIMELINE 02: 900×1100 px (4:5), < 250 KB.
-      image: '/images/story-2.webp',
+      image: '/images/story-2.jpg',
     },
     {
       id: 'forever',
-      date: 'Một ngày đẹp trời',
+      date: 'Mùa xuân 2024',
       title: 'Một lời hẹn mãi mãi',
       text: 'Từ hai người xa lạ, chúng mình chọn cùng nhau bước tiếp mọi ngày.',
       // ẢNH TIMELINE 03: 900×1100 px (4:5), < 250 KB.
-      image: '/images/story-3.webp',
+      image: '/images/story-3.jpg',
     },
   ],
   /**
@@ -74,26 +74,50 @@ export const wedding = {
   invitations: {
     groom: {
       label: 'Nhà trai',
+      leftLabel: 'NHÀ TRAI',
+      rightLabel: 'NHÀ GÁI',
       ceremonyName: 'Lễ thành hôn',
       formalText: 'Trân trọng báo tin lễ thành hôn của hai con',
       date: '2026-11-07T09:00:00+07:00',
       dateText: '07 . 11 . 2026',
+      leftParents: ['Ông Hồ Phước Lành', 'Bà Mai Thị Hằng'],
+      rightParents: ['Ông Cao Chánh Thành', 'Bà Lê Thị Nga'],
       events: [
-        { id: 'ceremony', label: 'Lễ thành hôn', time: '09:30 · Thứ bảy, 07/11/2026', venue: 'Nhà riêng chú rể', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: '' },
+        { id: 'ceremony', label: 'Lễ thành hôn', time: '09:00 · Thứ bảy, 07/11/2026', venue: 'Nhà riêng chú rể', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: '' },
         { id: 'reception', label: 'Tiệc cưới nhà trai', time: '10:30 · Thứ bảy, 07/11/2026', venue: 'Nhà văn hóa TDP Phong Hải 1 (Hải Thế cũ)', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: 'https://maps.app.goo.gl/yJtvKyAqCQx6ijii6' },
       ],
+      bankAccount: {
+        owner: 'Hồ Trọng Lịch',
+        bank: 'Vietcombank',
+        accountNumber: '1026082726',
+        // QR VIETQR: PNG hoặc WebP vuông 600×600 px, rõ, quét thử trước khi công khai.
+        qrImage: '/images/qrcode-groom.jpg',
+        role: 'Chú rể',
+      },
     },
     bride: {
       label: 'Nhà gái',
+      leftLabel: 'NHÀ GÁI',
+      rightLabel: 'NHÀ TRAI',
       ceremonyName: 'Lễ vu quy',
       formalText: 'Trân trọng báo tin lễ vu quy của hai con',
       // THAY NGÀY THỰC TẾ của nhà gái. Giá trị dưới đây chỉ là DEMO.
       date: '2026-11-06T08:30:00+07:00',
       dateText: '06 . 11 . 2026',
+      leftParents: ['Ông Cao Chánh Thành', 'Bà Lê Thị Nga'],
+      rightParents: ['Ông Hồ Phước Lành', 'Bà Mai Thị Hằng'],
       events: [
         { id: 'ceremony', label: 'Lễ vu quy', time: '08:30 · Thứ sáu, 06/11/2026', venue: 'Nhà riêng cô dâu', address: 'TDP Điền Hải 3, Phường Phong Quảng, TP Huế', mapUrl: '' },
         { id: 'reception', label: 'Tiệc cưới nhà gái', time: '10:00 · Thứ sáu, 06/11/2026', venue: 'Nhà văn hóa TDP Điền Hải 3 (Thế Chí Đông 6 cũ)', address: 'TDP Điền Hải 3, Phường Phong Quảng, TP Huế', mapUrl: 'https://maps.app.goo.gl/ixt1C8TXQGFbKSYN9' },
       ],
+      bankAccount: {
+        owner: 'Cao Thị Mỹ Hằng',
+        bank: 'Vietcombank',
+        accountNumber: '1022812315',
+        // QR VIETQR: PNG hoặc WebP vuông 600×600 px, rõ, quét thử trước khi công khai.
+        qrImage: '/images/qrcode-bride.jpg',
+        role: 'Cô dâu',
+      },
     },
   },
   // ẢNH GALLERY: 900×1200 px (3:4) hoặc 1200×900 px (4:3), WebP ~100–300 KB/tấm.
@@ -103,8 +127,7 @@ export const wedding = {
     { src: '/images/gallery-2.jpeg', alt: 'Nụ cười thật dịu dàng' },
     { src: '/images/gallery-3.jpg', alt: 'Khoảnh khắc đáng nhớ' },
     { src: '/images/gallery-4.jpg', alt: 'Mình đi cùng nhau nhé' },
-    { src: '/images/gallery-5.jpg', alt: 'Một ngày nắng đẹp' },
-    { src: '/images/gallery-6.webp', alt: 'Ngày chung đôi' },
+    { src: '/images/gallery-5.jpg', alt: 'Ngày chung đôi' },
   ],
   // Để trống cho đến khi có STK THẬT. Không tự tạo QR từ số tài khoản chưa xác nhận.
   bankAccounts: [] as Array<{

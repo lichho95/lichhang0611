@@ -1639,31 +1639,75 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .bank-card {
   background:#fffdfa;
   border:1px solid #dfc9ba;
-  padding:25px;
+  border-radius:4px;
+  padding:28px 24px;
   min-width:230px;
-  max-width:280px;
-  flex:1
+  max-width:300px;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center
 }
-.bank-card h4 {
-  font:400 24px var(--serif);
-  margin:13px 0;
-  color:#683841
+/* Dong 1: vai tro — eyebrow nho, chu hoa */
+.bank-card-role {
+  display:block;
+  font:600 10px/1 'DM Sans', sans-serif;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:#a0606a;
+  margin-bottom:14px
 }
 .bank-qr {
-  width:180px;
-  height:180px;
+  width:190px;
+  height:190px;
   object-fit:contain;
-  margin:0 auto
+  margin:0 auto;
+  border-radius:2px
 }
+/* Dong 3: ten chu tai khoan — serif, 16px, dong deu voi cac dong sau */
+.bank-card h4 {
+  font:500 16px/1.2 'DM Sans', monospace;
+  color:#8a6a6a;
+  margin:16px 0 2px;
+  /* letter-spacing:.01em */
+}
+/* Dong 4: ten ngan hang — nho hon, muted */
+.bank-card-bank {
+  display:block;
+  font:400 13px/1.2 'DM Sans', monospace;
+  letter-spacing:.04em;
+  color:#8a6a6a;
+  margin-bottom:14px
+}
+/* Dong 5: so tai khoan — mono bold, cung kich co voi ten */
 .bank-account-number {
-  font:600 18px 'DM Sans';
-  letter-spacing:.09em;
-  color:#7b5058
+  font:500 16px/1 'DM Sans', monospace;
+  letter-spacing:.1em;
+  color:#8a6a6a;
+  margin:0 0 16px
 }
-.bank-card .button {
+.bank-card-actions {
+  display:flex;
+  gap:8px;
+  width:100%
+}
+.bank-btn-copy {
   font-size:9px;
   min-height:42px;
-  padding:10px 13px
+  padding:10px 13px;
+  flex:1
+}
+.bank-btn-qr {
+  font-size:9px;
+  min-height:42px;
+  min-width:42px;
+  padding:10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  text-decoration:none
 }
 .gift-empty {
   border:1px dashed #cfad9d;
@@ -2071,7 +2115,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
     font-size:64px
   }
   .hero-date {
-    font-size:14px;
+    font-size:16px;
     letter-spacing:.34em
   }
   .hero-divider {
@@ -4325,4 +4369,148 @@ a.footer-replay:hover { color: #fff0e8; text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) {
   .opening-screen,.opening-content,.opening-chooser-stage {animation:none!important;}
   .gallery-stack-front {transition:none!important;}
+}
+
+
+/* ================================================================
+   V9.4.1 — hero mobile fine-tuning after real-photo review.
+   Lift title panel and supporting overlays slightly on mobile/tablet.
+   ================================================================ */
+@media (max-width: 920px) {
+  .hero-content {
+    margin: -80px auto 0 !important;
+    padding-top: 38px !important;
+  }
+  .hero-photo-kicker {
+    top: clamp(110px, 13.5svh, 145px) !important;
+  }
+  .hero-stamp {
+    top: clamp(130px, 18.5svh, 210px) !important;
+  }
+}
+@media (max-width: 380px) {
+  .hero-content {
+    margin: -50px auto 0 !important;
+    padding-top: 34px !important;
+  }
+  .hero-photo-kicker {
+    top: clamp(122px, 15svh, 152px) !important;
+  }
+  .hero-stamp {
+    top: clamp(130px, 16svh, 190px) !important;
+  }
+}
+
+
+/* ================================================================
+   V9.5 — gallery Polaroid cards: real photos in back + instant navigation.
+   Existing gallery and modal layout remains unchanged.
+   ================================================================ */
+@media (max-width: 680px) {
+  .gallery-stack-active {
+    position: relative;
+    isolation: isolate;
+    overflow: visible;
+  }
+  .gallery-stack-card.gallery-stack-front {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    backface-visibility: hidden;
+    transform-origin: center;
+    transition: transform 175ms cubic-bezier(.22,1,.36,1), opacity 140ms ease;
+    will-change: transform;
+  }
+  .gallery-stack-card.gallery-stack-front img {
+    display: block;
+    width: 100%;
+    height: calc(100% - 50px);
+    object-fit: cover;
+  }
+  .gallery-stack-card[data-layer="0"] {
+    z-index: 5;
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+    pointer-events: auto;
+    cursor: zoom-in;
+  }
+  .gallery-stack-card[data-layer="1"] {
+    z-index: 4;
+    transform: translate(-10%, 13px) rotate(-7deg);
+    opacity: 1;
+    pointer-events: none;
+  }
+  .gallery-stack-card[data-layer="2"] {
+    z-index: 3;
+    transform: translate(10%, 10px) rotate(8deg);
+    opacity: .98;
+    pointer-events: none;
+  }
+  .gallery-stack-card[data-layer="hidden"] {
+    z-index: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(.98);
+    transition: none;
+  }
+  .gallery-stack-card:disabled { cursor: default; }
+  .gallery-stack-flower { z-index: 6; }
+}
+@media (max-width: 680px) and (prefers-reduced-motion: reduce) {
+  .gallery-stack-card.gallery-stack-front { transition: none !important; }
+}
+
+/* ========================================
+   HERO — PREMIUM IVORY PAPER
+   Mobile & Tablet
+   ======================================== */
+
+@media (max-width: 920px) {
+  .hero-content {
+    /* Màu nền giấy kem */
+    background-color: #FBF4EA;
+
+    /* Vân giấy rất nhẹ + chuyển màu */
+    background-image:
+      radial-gradient(
+        rgba(143, 101, 88, 0.018) 0.65px,
+        transparent 0.9px
+      ),
+      linear-gradient(
+        180deg,
+        #FFF9F2 0%,
+        #FAF0E5 62%,
+        #F3E7DC 100%
+      );
+
+    background-size:
+      8px 8px,
+      100% 100%;
+
+    /* Đường viền cong */
+    border-top: 1px solid #D6B3AA;
+
+    border-radius:
+      49% 49% 0 0 / 32px 32px 0 0;
+
+    /* Tạo chiều sâu như giấy nổi trên ảnh */
+    box-shadow:
+      0 -8px 30px rgba(73, 40, 45, 0.10),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+}
+
+/* Wedding Invitation — Mobile & Tablet */
+@media (max-width: 920px) {
+  .invitation-section {
+    background: linear-gradient(
+      180deg,
+      #F6EAE4 0%,
+      #F3E3DC 45%,
+      #F0DDD5 100%
+    );
+  }
 }
