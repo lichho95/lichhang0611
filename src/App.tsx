@@ -286,9 +286,9 @@ function Hero({ guestName, active, side }: { guestName: string; active: boolean;
           loading="eager" decoding="async" fetchPriority="high" />
         <div className="hero-photo-veil"/>
       </motion.div>
-      <motion.div className="hero-photo-kicker" aria-hidden="true"
+      {/* <motion.div className="hero-photo-kicker" aria-hidden="true"
         initial={false} animate={{opacity:active?1:0,y:active?0:12}}
-        transition={{duration:.75,ease}}>NGÀY HẠNH PHÚC CỦA <span>♡</span></motion.div>
+        transition={{duration:.75,ease}}>NGÀY CHUNG ĐÔI <span>♡</span></motion.div> */}
       <div className="hero-content">
         <motion.span initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 26 }} transition={{ duration: .65, ease }} className="eyebrow hero-kicker">NGÀY HẠNH PHÚC CỦA</motion.span>
         <motion.h1 initial={false} animate={{ opacity: active ? 1 : 0, y: active ? 0 : 48, scale: active ? 1 : .965 }} transition={{ duration: .82, ease }} className="hero-names"><span>{wedding.couple.groom}</span><em>&</em><span>{wedding.couple.bride}</span></motion.h1>
