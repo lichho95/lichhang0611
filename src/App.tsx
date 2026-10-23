@@ -744,6 +744,7 @@ export default function App() {
     setRsvpOpen(false);
     setRsvpConfirmed(false);
     setAnimationCycle(c => c + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const enter=()=>{setHeroRevealed(true);setOpened(true);};
   const replayStory = () => {
