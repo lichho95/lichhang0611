@@ -372,7 +372,7 @@ function WeddingInvitation({ guestName, side }: { guestName: string; side: Invit
           </motion.div>
         </div>
         <div className="invitation-solemn-text">{invitation.formalText}</div>
-        <div className="invitation-couple-names"><span>{wedding.couple.groomFullName}</span><em>&</em><span>{wedding.couple.brideFullName}</span></div>
+        <div className="invitation-couple-names"><span>{invitation.leftName}</span><em>&</em><span>{invitation.rightName}</span></div>
         <div className="formal-ornament" aria-hidden="true">✧ ─── ♡ ─── ✧</div>
         <span className="invitation-invite-copy">{guestName ? `Trân trọng kính mời ${guestName} cùng gia đình đến dự ngày vui` : `Thân mời bạn cùng gia đình đến dự ngày vui của chúng mình`}</span>
         <div className="invitation-date-title">NGÀY MÌNH CHUNG ĐÔI</div>

@@ -82,6 +82,8 @@ export const wedding = {
       dateText: '07 . 11 . 2026',
       leftParents: ['Ông Hồ Phước Lành', 'Bà Mai Thị Hằng'],
       rightParents: ['Ông Cao Chánh Thành', 'Bà Lê Thị Nga'],
+      leftName: 'Hồ Trọng Lịch',
+      rightName: 'Cao Thị Mỹ Hằng',
       events: [
         { id: 'ceremony', label: 'Lễ thành hôn', time: '09:00 · Thứ bảy, 07/11/2026', venue: 'Nhà riêng chú rể', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: '' },
         { id: 'reception', label: 'Tiệc cưới nhà trai', time: '10:30 · Thứ bảy, 07/11/2026', venue: 'Nhà văn hóa TDP Phong Hải 1 (Hải Thế cũ)', address: 'TDP Phong Hải 1, Phường Phong Quảng, TP Huế', mapUrl: 'https://maps.app.goo.gl/yJtvKyAqCQx6ijii6' },
@@ -106,6 +108,8 @@ export const wedding = {
       dateText: '06 . 11 . 2026',
       leftParents: ['Ông Cao Chánh Thành', 'Bà Lê Thị Nga'],
       rightParents: ['Ông Hồ Phước Lành', 'Bà Mai Thị Hằng'],
+      leftName: 'Cao Thị Mỹ Hằng',
+      rightName: 'Hồ Trọng Lịch',
       events: [
         { id: 'ceremony', label: 'Lễ vu quy', time: '08:30 · Thứ sáu, 06/11/2026', venue: 'Nhà riêng cô dâu', address: 'TDP Điền Hải 3, Phường Phong Quảng, TP Huế', mapUrl: '' },
         { id: 'reception', label: 'Tiệc cưới nhà gái', time: '10:00 · Thứ sáu, 06/11/2026', venue: 'Nhà văn hóa TDP Điền Hải 3 (Thế Chí Đông 6 cũ)', address: 'TDP Điền Hải 3, Phường Phong Quảng, TP Huế', mapUrl: 'https://maps.app.goo.gl/ixt1C8TXQGFbKSYN9' },
@@ -126,8 +130,9 @@ export const wedding = {
     { src: '/images/gallery-1.jpeg', alt: 'Một khoảnh khắc bên nhau' },
     { src: '/images/gallery-2.jpeg', alt: 'Nụ cười thật dịu dàng' },
     { src: '/images/gallery-3.jpg', alt: 'Khoảnh khắc đáng nhớ' },
+    { src: '/images/gallery-5.jpg', alt: 'Cùng nhau bước tiếp' },
     { src: '/images/gallery-4.jpg', alt: 'Mình đi cùng nhau nhé' },
-    { src: '/images/gallery-5.jpg', alt: 'Ngày chung đôi' },
+    { src: '/images/gallery-6.jpg', alt: 'Ngày chung đôi' },
   ],
   // Để trống cho đến khi có STK THẬT. Không tự tạo QR từ số tài khoản chưa xác nhận.
   bankAccounts: [] as Array<{
