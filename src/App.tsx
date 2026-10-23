@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion, useInView, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, RotateCcw, CalendarDays, Check, Copy, Download, Gift, Heart, Lock, Mail, MapPin, Menu, Music2, Pause, Play, Send, Sparkles, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, RotateCcw, CalendarDays, Check, Copy, Download, Gift, Heart, Mail, MapPin, Menu, Music2, Pause, Play, Send, Sparkles, X } from 'lucide-react';
 import { wedding } from './wedding.config';
 import { Ribbon } from './components/Ribbon';
 import { JourneyTransition } from './components/JourneyTransition';
@@ -660,6 +660,7 @@ function Modal({ onClose, label, children, delay=0, variant }: { onClose: () => 
 }
 function Footer({ onReplay, side }: { onReplay: () => void; side: InvitationSide }) {
   const [shared,setShared]=useState(false);
+  console.log(onReplay)
   const share=async()=>{try {if(navigator.share)await navigator.share({title:'Thiệp cưới',text:'Trân trọng kính mời bạn đến chung vui!',url:window.location.href});else {await navigator.clipboard.writeText(window.location.href);setShared(true);setTimeout(()=>setShared(false),2500);}}catch{/* user cancelled share */}};
   return <footer className="footer-section"><Floral position="left"/><div className="container footer-content"><div className="eyebrow">KHỞI ĐẦU CỦA MỘT ĐỜI BÊN NHAU</div><div className="footer-names">{wedding.couple.groom} <em>&</em> {wedding.couple.bride}</div><span className="footer-date">{wedding.invitations[side].dateText}</span><span className="footer-rule"/><p>{wedding.thanks}</p><button className="footer-share" onClick={share}>{shared?<Check size={16}/>:<Mail size={16}/>} {shared?'Đã sao chép liên kết':'Chia sẻ thiệp cưới'}</button><span className="footer-made">ĐƯỢC DỆT NÊN TỪ YÊU THƯƠNG</span></div><button className="back-to-top" onClick={()=>scrollTo('home')} aria-label="Quay lại đầu trang"><ArrowUp size={19}/></button></footer>;
 }
