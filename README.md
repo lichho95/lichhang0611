@@ -114,13 +114,13 @@ Chạy:
 
 ```bash
 npx wrangler login
-npx wrangler d1 create wedding-db
-npx wrangler d1 execute wedding-db --remote --file=./schema.sql
+npx wrangler d1 create wedding
+npx wrangler d1 execute wedding --remote --file=./schema.sql
 ```
 
 Cloudflare Dashboard → **Workers & Pages** → project thiệp cưới → **Settings → Bindings → Add → D1 database**:
 - Variable name: **`DB`** (phải khớp chính xác).
-- D1 database: `wedding-db`.
+- D1 database: `wedding`.
 - **Redeploy** project sau khi thêm binding.
 
 Không cần `wrangler.jsonc` để triển khai theo cách trên. Có `wrangler.example.jsonc` làm tài liệu cho người thích quản lý binding bằng cấu hình — phải thay Database ID trước khi dùng.

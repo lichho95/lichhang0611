@@ -1,11 +1,17 @@
 import { json, clean, readPayload, verifyChallenge } from '../../server/common.js';
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
+  // Public wishes always belong to the invitation currently being viewed.
+  // Never expose the other side's wishes (or unclassified legacy records).
+  const side = new URL(request.url).searchParams.get('side');
+  if (side !== 'groom' && side !== 'bride') {
+    return json({ error: 'Vui lòng chọn thiệp nhà trai hoặc nhà gái.' }, 400);
+  }
   if (!env.DB) return json({ error: 'Chưa liên kết Cloudflare D1 (binding DB).' }, 503);
   try {
     const { results } = await env.DB.prepare(
-      "SELECT id, guest_name, message, side, created_at FROM wishes WHERE status = 'approved' ORDER BY created_at DESC, id DESC LIMIT 300"
-    ).all();
+      "SELECT id, guest_name, message, side, created_at FROM wishes WHERE status = 'approved' AND side = ? ORDER BY created_at DESC, id DESC LIMIT 300"
+    ).bind(side).all();
     return json({ wishes: results || [] });
   } catch { return json({ error: 'Chưa khởi tạo bảng wishes. Xem schema.sql.' }, 503); }
 }

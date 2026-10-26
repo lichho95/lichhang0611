@@ -63,21 +63,27 @@ async function parseError(res: Response) {
  * Ở chế độ vite dev server (5173), API chỉ minh họa bằng localStorage.
  * Trên Cloudflare Pages, endpoint /api/* dùng Functions + D1 thật.
  */
-export async function loadWishes(): Promise<{ wishes: Wish[]; demo: boolean }> {
+export async function loadWishes(side: InvitationSide): Promise<{ wishes: Wish[]; demo: boolean }> {
+  // Only show wishes belonging to the invitation being viewed. Legacy records
+  // have no known side and remain visible only in Admin's "Chưa phân loại" tab.
+  const demoForSide = wedding.demoWishes.filter(w => 'side' in w && w.side === side);
+  const localForSide = () => safeRead<Wish[]>(WISH_KEY, []).filter(
+    w => w.side === side && (!w.status || w.status === 'approved')
+  );
   if (import.meta.env.DEV) {
-    const stored = safeRead<Wish[]>(WISH_KEY, []);
-    const approvedStored = stored.filter(w => !w.status || w.status === 'approved');
-    return { wishes: [...approvedStored, ...wedding.demoWishes], demo: true };
+    return { wishes: [...localForSide(), ...demoForSide], demo: true };
   }
   try {
-    const res = await fetch('/api/wishes', { headers: { Accept: 'application/json' } });
+    const params = new URLSearchParams({ side });
+    const res = await fetch(`/api/wishes?${params.toString()}`, {
+      headers: { Accept: 'application/json' }, cache: 'no-store'
+    });
     if (!res.ok) throw new Error('No API');
     const json = await res.json() as { wishes: Wish[] };
-    return { wishes: json.wishes, demo: false };
+    // Defense in depth if an older API is still deployed on Cloudflare.
+    return { wishes: (json.wishes || []).filter(w => w.side === side), demo: false };
   } catch {
-    const stored = safeRead<Wish[]>(WISH_KEY, []);
-    const approvedStored = stored.filter(w => !w.status || w.status === 'approved');
-    return { wishes: approvedStored.concat([...wedding.demoWishes]), demo: true };
+    return { wishes: [...localForSide(), ...demoForSide], demo: true };
   }
 }
 

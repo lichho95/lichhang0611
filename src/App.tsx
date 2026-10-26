@@ -503,6 +503,7 @@ function WishesSection({ guestName, side, showToast }: { guestName: string; side
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const closeTimerRef = useRef<number | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -510,8 +511,23 @@ function WishesSection({ guestName, side, showToast }: { guestName: string; side
     };
   }, []);
 
-  const refresh = useCallback(async () => { const result = await loadWishes(); setWishes(result.wishes); setIsDemo(result.demo); }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
+  const refresh = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    const result = await loadWishes(side);
+    // If a visitor changes invitation while fetching, discard the old result.
+    if (requestId !== requestIdRef.current) return;
+    setWishes(result.wishes);
+    setIsDemo(result.demo);
+    setWishIndex(0);
+    setLetterOpen(false);
+  }, [side]);
+  useEffect(() => {
+    setWishes([]);
+    setWishIndex(0);
+    setLetterOpen(false);
+    void refresh();
+    return () => { requestIdRef.current += 1; };
+  }, [refresh]);
   const active = wishes[wishIndex];
   const go = (step: number) => { setWishIndex(i=>clampIndex(i+step,wishes.length)); setLetterOpen(false); };
   const submit = async (e: FormEvent<HTMLFormElement>) => {
@@ -777,7 +793,7 @@ export default function App() {
       {(wedding.sections.couple || wedding.sections.events || wedding.sections.countdown) && <WeddingInvitation guestName={guestName} side={activeSide}/>}
       {wedding.sections.story && <><JourneyTransition number="01" title="Chuyện chúng mình" motif="heart"/><StorySection/></>}
       {wedding.sections.gallery && <><JourneyTransition number="02" title="Những khung hình yêu" motif="loop"/><GallerySection side={activeSide} onPhotoOpen={setLightbox} onVideoOpen={()=>setVideoOpen(true)}/></>}
-      {wedding.sections.wishes && <><JourneyTransition number="03" title="Những lá thư yêu thương" motif="letter"/><WishesSection guestName={guestName} side={activeSide} showToast={showToast}/></>}
+      {wedding.sections.wishes && <><JourneyTransition number="03" title="Những lá thư yêu thương" motif="letter"/><WishesSection key={activeSide} guestName={guestName} side={activeSide} showToast={showToast}/></>}
       {wedding.sections.gift && <><JourneyTransition number="04" title="Một chút yêu thương" motif="bow"/><GiftSection side={activeSide}/></>}
     </main>
     <Footer onReplay={replayStory} side={activeSide}/>

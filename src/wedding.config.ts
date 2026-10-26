@@ -145,9 +145,9 @@ export const wedding = {
   }>,
   // Lời chúc DEMO CHỈ xuất hiện khi chưa kết nối D1; không phải lời chúc thật.
   demoWishes: [
-    { id: 1, guest_name: 'Người bạn thân', message: 'Chúc hai bạn luôn chọn nhau, từ những ngày rực rỡ cho đến những ngày thật bình yên.', created_at: '2026-10-01T09:30:00Z' },
-    { id: 2, guest_name: 'Một người thương', message: 'Mong mỗi sớm mai thức dậy, hai bạn đều có lý do để mỉm cười cùng nhau. Trăm năm hạnh phúc nhé!', created_at: '2026-10-02T10:30:00Z' },
-    { id: 3, guest_name: 'Bạn của hai người', message: 'Tình yêu đẹp nhất là khi hai người luôn là nhà của nhau. Chúc một hành trình thật dài và dịu dàng!', created_at: '2026-10-03T11:30:00Z' },
+    { id: 1, guest_name: 'Người bạn thân', message: 'Chúc hai bạn luôn chọn nhau, từ những ngày rực rỡ cho đến những ngày thật bình yên.', side: 'groom', created_at: '2026-10-01T09:30:00Z' },
+    { id: 2, guest_name: 'Một người thương', message: 'Mong mỗi sớm mai thức dậy, hai bạn đều có lý do để mỉm cười cùng nhau. Trăm năm hạnh phúc nhé!', side: 'bride', created_at: '2026-10-02T10:30:00Z' },
+    { id: 3, guest_name: 'Bạn của hai người', message: 'Tình yêu đẹp nhất là khi hai người luôn là nhà của nhau. Chúc một hành trình thật dài và dịu dàng!', side: 'groom', created_at: '2026-10-03T11:30:00Z' },
   ],
   // HIỆU ỨNG NỀN: tim rơi nhẹ ở mép màn hình; tắt bằng false nếu muốn giao diện tĩnh.
   effects: {

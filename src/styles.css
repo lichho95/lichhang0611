@@ -4514,3 +4514,14 @@ a.footer-replay:hover { color: #fff0e8; text-decoration: underline; }
     );
   }
 }
+
+/* V9.6 — Opening ribbon travels OVER the envelope during the journey.
+   Before the letter opens, the silk stays behind the sealed paper. */
+.opening-phase-journey .opening-silk-trail {
+  z-index: 12;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(91, 30, 48, .24));
+}
+.opening-phase-journey .opening-silk-trail path {
+  vector-effect: non-scaling-stroke;
+}
